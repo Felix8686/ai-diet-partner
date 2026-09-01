@@ -6,8 +6,8 @@
 - 当前阶段：饮食管理 MVP 原型，Next.js + TypeScript，移动端优先。
 - 当前开发分支：`hermes/round-03`；禁止直接修改 `main`。
 - 当前 PR：#3 `feat: connect local personalized meal planning`，目标 `main`，OPEN，未合并。
-- 当前 PR head：`bec55c55101cc399df50178ac2b6a397c193f24c`。
-- GitHub Actions：当前 head CI 已成功。
+- 本轮代码提交：`cfd171dd13d95db6731a9e84b975b5bec802e5f2`，已推送到 `hermes/round-03`。
+- GitHub Actions：本轮代码提交 CI 当前 pending。
 - Round 03 已实现本地确定性餐食规划、统一 localStorage 数据层、周方案、采购清单与每日反馈闭环。
 - 当前仍不接 Supabase、认证、真实 AI Provider 或第三方服务。
 
@@ -35,19 +35,20 @@
 - 首页部分餐别缺失时不会把其他餐别一起隐藏。
 - 无晚餐时晚间反馈入口仍存在。
 - 采购勾选、周方案、profile、每日反馈均有本地持久化。
+- “通常不吃早餐”时首页读取 profile，早晨跳过早餐 MissingMeal，顶部改为“午餐时间”并聚焦午餐；正常早餐用户缺少模板时仍保留原提示。
 
 ## 当前验证结果
 
 - `npm run lint`：通过。
-- `npm test`：33 项通过。
+- `npm test`：35 项通过。
 - `npm run build`：通过。
-- GitHub Actions：PR 当前 head CI 成功。
-- Hermes 已完成浏览器 smoke：建档 → 周方案 → 首页 → 采购 → 刷新持久化 → 每日反馈。
-- 第三次复验要求的三项代码提交 `a732825` 已真实存在 GitHub；交接提交为 `bec55c5`。
+- GitHub Actions：PR 当前 head `cfd171d` CI pending，等待远端结果。
+- Hermes 已完成浏览器 smoke：固定早晨访问首页，主动“通常不吃早餐”时顶部为“午餐时间”、午餐为 focus 且无早餐 MissingMeal；正常早餐用户无早餐模板时仍显示原缺失提示。
+- 第三次复验要求的三项代码提交 `a732825`、本次首页语义代码提交 `cfd171d` 均已真实存在 GitHub；本轮交接文档随最后一次提交推送。
 
-## ChatGPT 第四次复验：仅剩 1 项合并前语义修正
+## ChatGPT 第四次复验：唯一合并前语义修正已完成
 
-前三次复验发现的问题已经确认修正。当前不再扩大 Round 03 范围，只修下面这一项，修完通过验证后即可再次交给 ChatGPT 做最终合并判断。
+前三次复验发现的问题已经确认修正。本轮唯一的首页语义问题已修正并通过验证，当前不再扩大 Round 03 范围，等待 ChatGPT 做最终合并判断。
 
 ### “通常不吃早餐”时，首页仍把早餐显示成“缺少方案”
 
@@ -85,15 +86,7 @@
 
 ## 下一阶段任务
 
-继续使用 `hermes/round-03`，只完成上面的“通常不吃早餐：首页语义”修正。
-
-完成后：
-
-1. commit + push 到 `hermes/round-03`。
-2. 更新 PR #3。
-3. 更新本文件记录验证结果，并把“下一阶段任务”改为“等待 ChatGPT 最终复验”。
-4. 不得合并 `main`。
-5. 停止工作并等待 ChatGPT。
+本轮唯一任务“通常不吃早餐：首页语义”已完成，等待 ChatGPT 最终复验。
 
 ## 后续阶段候选（当前不要做）
 
@@ -111,3 +104,5 @@
 - PR #3 / Round 03：本地个性化规划和本地数据闭环。
 - ChatGPT 前三次复验累计发现并已修复：部分餐别空白、替换方案绕约束、纯素识别、外食采购语义、无晚餐反馈、周末差异、自然语言过敏输入、早餐习惯无效、自己带饭无效。
 - 2026-09-01：ChatGPT 第四次复验确认上述问题均已修正，仅保留“通常不吃早餐时首页仍误显示 MissingMeal”这一项合并前修正。
+- 2026-09-01：Hermes 在 `hermes/round-03` 提交 `cfd171d` 修正首页语义：读取已保存 profile 区分主动跳过早餐与真实模板缺失，早晨主动跳过时聚焦午餐并隐藏早餐 MissingMeal；新增两条视图回归测试，35 项测试、lint、build 通过。
+- 2026-09-01：真实首页 smoke 通过，验证主动跳过早餐与正常早餐缺失两条 UI 分支；代码已推送 PR #3，等待 ChatGPT 最终复验。
