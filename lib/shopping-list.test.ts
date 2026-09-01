@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import type { OnboardingProfile } from "@/types";
 import { generateWeekPlan } from "./meal-planner";
-import { deriveShoppingList } from "./shopping-list";
+import { deriveShoppingList, mergeShoppingListPreservingPurchased } from "./shopping-list";
 
 const profile: OnboardingProfile = {
   age: "30",
@@ -59,4 +59,23 @@ test("食堂和外卖不进入家庭采购，便利店成品仍进入采购清�
   assert.ok(providedOnlyIngredients.every((ingredient) => !shoppingNames.has(ingredient)));
   assert.ok(convenienceIngredients.size > 0);
   assert.ok([...convenienceIngredients].some((ingredient) => shoppingNames.has(ingredient)));
+});
+
+test("更新采购清单时保留仍存在食材的已买状态", () => {
+  const previousItems = [
+    { id: "old-chicken", category: "蛋白质", name: "鸡肉", amount: "1 份", purchased: true },
+    { id: "old-rice", category: "主食", name: "米饭", amount: "1 份", purchased: false },
+    { id: "old-removed", category: "其他", name: "已移除食材", amount: "1 份", purchased: true },
+  ];
+  const nextItems = [
+    { id: "new-chicken", category: "蛋白质", name: "鸡肉", amount: "2 份", purchased: false },
+    { id: "new-greens", category: "蔬菜", name: "生菜", amount: "1 份", purchased: false },
+  ];
+
+  const merged = mergeShoppingListPreservingPurchased(previousItems, nextItems);
+
+  assert.deepEqual(merged, [
+    { id: "new-chicken", category: "蛋白质", name: "鸡肉", amount: "2 份", purchased: true },
+    { id: "new-greens", category: "蔬菜", name: "生菜", amount: "1 份", purchased: false },
+  ]);
 });

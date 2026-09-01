@@ -40,3 +40,9 @@ export function formatLocalDateKey(value: string): string {
 export function getLocalWeekStartKey(date: Date = new Date()): string {
   return getLocalDateKey(getLocalWeekDates(date)[0]);
 }
+
+export function getAdjacentWeekStartKey(weekStart: string, offset: number): string | null {
+  const date = parseLocalDateKey(weekStart);
+  if (!date || !Number.isInteger(offset)) return null;
+  return getLocalWeekStartKey(new Date(date.getFullYear(), date.getMonth(), date.getDate() + offset * 7));
+}

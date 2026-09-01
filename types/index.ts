@@ -34,6 +34,7 @@ export type GeneratedWeekPlan = {
   rulesCannotSatisfy: boolean;
   status: "ready" | "rules-cannot-satisfy";
   warnings: string[];
+  adjustmentSummary?: string[];
 };
 
 export type ShoppingItem = {
@@ -81,4 +82,17 @@ export type FeedbackDraft = {
 export type StoredFeedback = FeedbackDraft & {
   date: string;
   submittedAt: number;
+};
+
+export type FeedbackReason = "没时间" | "太麻烦" | "买不到" | "太贵" | "不喜欢" | "临时聚餐" | "其他";
+
+export type FeedbackAdjustment = {
+  feedbackCount: number;
+  reasonCounts: Record<FeedbackReason, number>;
+  timePressure: number;
+  simplicity: number;
+  availability: number;
+  costSensitivity: number;
+  dislikedMealIds: string[];
+  explanations: string[];
 };
