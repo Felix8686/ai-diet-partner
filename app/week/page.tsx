@@ -4,11 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "@/components/bottom-nav";
 import { weekPlan } from "@/lib/mock-data";
+import { formatLocalDate, getLocalTodayIndex, getLocalWeekDates } from "@/lib/local-calendar";
 
 const labels: Record<string, string> = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐", snack: "加餐" };
 
 export default function WeekPage() {
-  const [selected, setSelected] = useState(0);
+  const [currentDate] = useState(() => new Date());
+  const weekDates = getLocalWeekDates(currentDate);
+  const todayIndex = getLocalTodayIndex(currentDate);
+  const [selected, setSelected] = useState(todayIndex);
   const day = weekPlan[selected];
 
   return (
@@ -22,15 +26,15 @@ export default function WeekPage() {
 
       <div className="dayTabs" role="tablist">
         {weekPlan.map((item, index) => (
-          <button type="button" role="tab" aria-selected={selected === index} aria-controls="selected-day" key={item.day} onClick={() => setSelected(index)} className={selected === index ? "dayTab active" : "dayTab"}>
-            <strong>{item.day}</strong><span>{item.date}</span>
+          <button type="button" role="tab" aria-selected={selected === index} aria-controls="selected-day" aria-label={`${item.day} ${formatLocalDate(weekDates[index])}${todayIndex === index ? "，今天" : ""}`} key={item.day} onClick={() => setSelected(index)} className={selected === index ? "dayTab active" : "dayTab"}>
+            <strong>{item.day}</strong><span>{formatLocalDate(weekDates[index])}</span>
           </button>
         ))}
       </div>
 
       <section className="sectionBlock" id="selected-day" role="tabpanel">
         <div className="sectionHeading compact">
-          <div><p className="sectionEyebrow">当前选择</p><h2>{day.day} · {selected === 0 ? "今天" : day.date}</h2></div>
+          <div><p className="sectionEyebrow">当前选择</p><h2>{day.day} · {selected === todayIndex ? "今天" : formatLocalDate(weekDates[selected])}</h2></div>
           <Link className="textButton" href="/shopping">去采购</Link>
         </div>
         <div className="mealList">

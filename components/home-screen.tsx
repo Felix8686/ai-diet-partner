@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BottomNav } from "./bottom-nav";
 import type { MealKind, MealPlanItem } from "@/types";
 import { getHomePeriod, type HomePeriod } from "@/lib/home-view";
+import { getLocalTodayIndex } from "@/lib/local-calendar";
 import { weekPlan } from "@/lib/mock-data";
 
 const periods = [
@@ -52,16 +53,17 @@ function MealCard({ meal, focus = false }: { meal: MealPlanItem; focus?: boolean
 }
 
 export function HomeScreen() {
-  const [hour, setHour] = useState(8);
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const updateHour = () => setHour(new Date().getHours());
-    updateHour();
-    const timer = window.setInterval(updateHour, 60_000);
+    const updateTime = () => setNow(new Date());
+    updateTime();
+    const timer = window.setInterval(updateTime, 60_000);
     return () => window.clearInterval(timer);
   }, []);
 
+  const hour = now.getHours();
   const period = getHomePeriod(hour);
-  const meals = weekPlan[0].meals;
+  const meals = weekPlan[getLocalTodayIndex(now)].meals;
   const breakfast = findMeal(meals, "breakfast");
   const lunch = findMeal(meals, "lunch");
   const dinner = findMeal(meals, "dinner");

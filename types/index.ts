@@ -13,7 +13,6 @@ export type MealPlanItem = {
 
 export type DayPlan = {
   day: string;
-  date: string;
   meals: MealPlanItem[];
 };
 
@@ -56,4 +55,5 @@ export type FeedbackDraft = {
   executionStatus: ExecutionStatus | "";
   snackLevel: SnackLevel | "";
   deviationReasons: string[];
+  otherReason: string;
 };

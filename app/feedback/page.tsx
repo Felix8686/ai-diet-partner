@@ -5,6 +5,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "@/components/bottom-nav";
 import type { FeedbackDraft } from "@/types";
+import { getFeedbackValidationMessage, feedbackCanSubmit } from "@/lib/feedback-validation";
+import { getLocalDateKey } from "@/lib/local-calendar";
 
 const executionOptions: Array<{ value: FeedbackDraft["executionStatus"]; label: string }> = [
   { value: "completed", label: "完成" },
@@ -24,11 +26,13 @@ const initialDraft: FeedbackDraft = {
   executionStatus: "",
   snackLevel: "",
   deviationReasons: [],
+  otherReason: "",
 };
 
 export default function FeedbackPage() {
   const [draft, setDraft] = useState<FeedbackDraft>(initialDraft);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
 
   function toggleReason(reason: string) {
     setDraft((current) => {
@@ -37,12 +41,20 @@ export default function FeedbackPage() {
         : [...current.deviationReasons, reason];
       return { ...current, deviationReasons: reasons };
     });
+    setError("");
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const date = new Date().toISOString().slice(0, 10);
-    window.localStorage.setItem(`ai-diet-feedback-${date}`, JSON.stringify({ ...draft, submittedAt: new Date().toISOString() }));
+    const validationMessage = getFeedbackValidationMessage(draft);
+    if (!feedbackCanSubmit(draft)) {
+      setError(validationMessage);
+      return;
+    }
+
+    const date = getLocalDateKey();
+    window.localStorage.setItem(`ai-diet-feedback-${date}`, JSON.stringify({ ...draft, submittedAt: Date.now() }));
+    setError("");
     setSubmitted(true);
   }
 
@@ -77,7 +89,7 @@ export default function FeedbackPage() {
           <div className="choiceGrid threeColumns">
             {executionOptions.map((option, index) => (
               <label key={option.value}>
-                <input aria-label={option.label} type="radio" name="execution" value={option.value} required={index === 0} checked={draft.executionStatus === option.value} onChange={() => setDraft((current) => ({ ...current, executionStatus: option.value }))} />
+                <input aria-label={option.label} type="radio" name="execution" value={option.value} required={index === 0} checked={draft.executionStatus === option.value} onChange={() => { setDraft((current) => ({ ...current, executionStatus: option.value })); setError(""); }} />
                 {option.label}
               </label>
             ))}
@@ -89,7 +101,7 @@ export default function FeedbackPage() {
           <div className="choiceGrid threeColumns">
             {snackOptions.map((option, index) => (
               <label key={option.value}>
-                <input aria-label={option.label} type="radio" name="snack" value={option.value} required={index === 0} checked={draft.snackLevel === option.value} onChange={() => setDraft((current) => ({ ...current, snackLevel: option.value }))} />
+                <input aria-label={option.label} type="radio" name="snack" value={option.value} required={index === 0} checked={draft.snackLevel === option.value} onChange={() => { setDraft((current) => ({ ...current, snackLevel: option.value })); setError(""); }} />
                 {option.label}
               </label>
             ))}
@@ -106,9 +118,11 @@ export default function FeedbackPage() {
               </label>
             ))}
           </div>
-          <p className="fieldHint">可以多选，也可以不选。</p>
+          {draft.deviationReasons.includes("其他") && <label htmlFor="other-reason">请补充其他原因<input id="other-reason" maxLength={80} value={draft.otherReason} onChange={(event) => { const value = event.currentTarget.value; setDraft((current) => ({ ...current, otherReason: value })); setError(""); }} placeholder="例如：临时加班" /></label>}
+          <p className="fieldHint">完成时可以不选；如果部分完成或没执行，请至少选一个。</p>
         </fieldset>
 
+        {error && <p className="formError" role="alert">{error}</p>}
         <button className="primaryButton" type="submit">保存今天的反馈</button>
       </form>
 
