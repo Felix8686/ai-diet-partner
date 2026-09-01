@@ -1,9 +1,12 @@
 import type { GeneratedWeekPlan, MealPlanItem, OnboardingProfile, ShoppingItem, StoredFeedback } from "@/types";
+import { getLocalWeekDates, getLocalDateKey, parseLocalDateKey } from "@/lib/local-calendar";
 
 export const STORAGE_KEYS = {
   profile: "ai-diet-profile",
   weeklyPlan: "ai-diet-weekly-plan",
+  weeklyPlanForWeek: (weekStart: string) => `ai-diet-weekly-plan-${weekStart}`,
   shoppingList: "ai-diet-shopping-list",
+  shoppingListForWeek: (weekStart: string) => `ai-diet-shopping-list-${weekStart}`,
   feedback: (date: string) => `ai-diet-feedback-${date}`,
 };
 
@@ -131,24 +134,57 @@ export function saveProfile(profile: OnboardingProfile): void {
   writeJson(STORAGE_KEYS.profile, profile);
 }
 
+function readWeeklyPlanAtKey(key: string): GeneratedWeekPlan | null {
+  const value = readJson(key);
+  return isWeeklyPlan(value) ? normalizeWeeklyPlan(value) : null;
+}
+
+function readLegacyWeeklyPlan(): GeneratedWeekPlan | null {
+  return readWeeklyPlanAtKey(STORAGE_KEYS.weeklyPlan);
+}
+
 export function loadWeeklyPlan(weekStart?: string): GeneratedWeekPlan | null {
-  const value = readJson(STORAGE_KEYS.weeklyPlan);
-  if (!isWeeklyPlan(value)) return null;
-  const normalized = normalizeWeeklyPlan(value);
-  return weekStart && normalized.weekStart !== weekStart ? null : normalized;
+  if (weekStart) {
+    const keyedPlan = readWeeklyPlanAtKey(STORAGE_KEYS.weeklyPlanForWeek(weekStart));
+    if (keyedPlan?.weekStart === weekStart) return keyedPlan;
+  }
+
+  const legacyPlan = readLegacyWeeklyPlan();
+  if (!legacyPlan || (weekStart && legacyPlan.weekStart !== weekStart)) return null;
+  if (weekStart) writeJson(STORAGE_KEYS.weeklyPlanForWeek(weekStart), legacyPlan);
+  return legacyPlan;
 }
 
 export function saveWeeklyPlan(plan: GeneratedWeekPlan): void {
-  writeJson(STORAGE_KEYS.weeklyPlan, plan);
+  writeJson(STORAGE_KEYS.weeklyPlanForWeek(plan.weekStart), plan);
 }
 
-export function loadShoppingList(): ShoppingItem[] {
+export function loadShoppingList(weekStart?: string): ShoppingItem[] {
+  if (weekStart) {
+    const keyedValue = readJson(STORAGE_KEYS.shoppingListForWeek(weekStart));
+    if (Array.isArray(keyedValue) && keyedValue.every(isShoppingItem)) return keyedValue;
+
+    const legacyPlan = readLegacyWeeklyPlan();
+    const legacyValue = readJson(STORAGE_KEYS.shoppingList);
+    if (legacyPlan?.weekStart === weekStart && Array.isArray(legacyValue) && legacyValue.every(isShoppingItem)) {
+      writeJson(STORAGE_KEYS.shoppingListForWeek(weekStart), legacyValue);
+      return legacyValue;
+    }
+    return [];
+  }
+
   const value = readJson(STORAGE_KEYS.shoppingList);
   return Array.isArray(value) && value.every(isShoppingItem) ? value : [];
 }
 
-export function saveShoppingList(items: ShoppingItem[]): void {
-  writeJson(STORAGE_KEYS.shoppingList, items);
+export function saveShoppingList(items: ShoppingItem[]): void;
+export function saveShoppingList(weekStart: string, items: ShoppingItem[]): void;
+export function saveShoppingList(weekStartOrItems: string | ShoppingItem[], maybeItems?: ShoppingItem[]): void {
+  if (typeof weekStartOrItems === "string") {
+    writeJson(STORAGE_KEYS.shoppingListForWeek(weekStartOrItems), maybeItems ?? []);
+    return;
+  }
+  writeJson(STORAGE_KEYS.shoppingList, weekStartOrItems);
 }
 
 export function loadDailyFeedback(date: string): StoredFeedback | null {
@@ -170,4 +206,13 @@ export function saveDailyFeedback(date: string, feedback: StoredFeedback | Omit<
     date,
     submittedAt: "submittedAt" in feedback ? feedback.submittedAt : Date.now(),
   });
+}
+
+export function loadFeedbackForWeek(weekStart: string): StoredFeedback[] {
+  const startDate = parseLocalDateKey(weekStart);
+  if (!startDate) return [];
+  return getLocalWeekDates(startDate)
+    .map((date) => getLocalDateKey(date))
+    .map((date) => loadDailyFeedback(date))
+    .filter((feedback): feedback is StoredFeedback => feedback !== null);
 }

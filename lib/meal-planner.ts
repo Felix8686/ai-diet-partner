@@ -1,4 +1,4 @@
-import type { GeneratedWeekPlan, MealKind, MealTemplate, OnboardingProfile } from "@/types";
+import type { FeedbackAdjustment, GeneratedWeekPlan, MealKind, MealTemplate, OnboardingProfile } from "@/types";
 import { getLocalDateKey, getLocalWeekDates, getLocalWeekStartKey, parseLocalDateKey } from "@/lib/local-calendar";
 import { mealTemplates } from "@/lib/meal-templates";
 
@@ -102,7 +102,12 @@ function canUseTemplate(template: MealTemplate, profile: OnboardingProfile, isWe
   return true;
 }
 
-function preferenceScore(template: MealTemplate, profile: OnboardingProfile, isWeekend: boolean): number {
+function preferenceScore(
+  template: MealTemplate,
+  profile: OnboardingProfile,
+  isWeekend: boolean,
+  adjustments?: FeedbackAdjustment,
+): number {
   const scenes = Array.isArray(profile.mealScenes) ? profile.mealScenes : [];
   const templateScenes = sceneParts(template.scene);
   const likes = terms(profile.likedFoods);
@@ -128,6 +133,31 @@ function preferenceScore(template: MealTemplate, profile: OnboardingProfile, isW
   }
   if (template.tags.includes("无烹饪") && profile.weekdayCookTime === "通常不做饭") score += 8;
   score += likes.filter((like) => [template.title, ...template.ingredients].join(" ").toLowerCase().includes(like)).length * 7;
+
+  if (adjustments) {
+    if (adjustments.timePressure > 0) {
+      const quick = template.prepMinutes <= 10 || template.kitchenCapabilities.length === 0 || template.tags.includes("无烹饪");
+      score += adjustments.timePressure * (quick ? 14 : -10);
+      score -= adjustments.timePressure * Math.max(0, template.prepMinutes - 10);
+    }
+    if (adjustments.simplicity > 0) {
+      const simple = template.prepMinutes <= 10 && template.kitchenCapabilities.length <= 1;
+      score += adjustments.simplicity * (simple ? 12 : -8);
+      score -= adjustments.simplicity * (template.kitchenCapabilities.length * 6 + Math.max(0, template.prepMinutes - 10) / 2);
+    }
+    if (adjustments.availability > 0) {
+      const easyToGet = template.shoppingItems.length <= 2
+        || template.scene.includes("便利店")
+        || template.scene.includes("公司食堂")
+        || template.scene.includes("外卖");
+      score += adjustments.availability * (easyToGet ? 14 : -6);
+      score -= adjustments.availability * Math.min(template.shoppingItems.length, 4) * 2;
+    }
+    if (adjustments.costSensitivity > 0) {
+      score -= adjustments.costSensitivity * template.estimatedCost * 1.5;
+    }
+    if (adjustments.dislikedMealIds.includes(template.id)) score -= 30;
+  }
   return score;
 }
 
@@ -139,11 +169,12 @@ function rankCandidates(
   weekStart: string,
   usedCounts: Map<string, number>,
   previousId?: string,
+  adjustments?: FeedbackAdjustment,
 ): MealTemplate[] {
   const isWeekend = dayIndex >= 5;
   return [...candidates].sort((left, right) => {
-    const leftScore = preferenceScore(left, profile, isWeekend) - (usedCounts.get(left.id) ?? 0) * 7 - (left.id === previousId ? 28 : 0);
-    const rightScore = preferenceScore(right, profile, isWeekend) - (usedCounts.get(right.id) ?? 0) * 7 - (right.id === previousId ? 28 : 0);
+    const leftScore = preferenceScore(left, profile, isWeekend, adjustments) - (usedCounts.get(left.id) ?? 0) * 7 - (left.id === previousId ? 28 : 0);
+    const rightScore = preferenceScore(right, profile, isWeekend, adjustments) - (usedCounts.get(right.id) ?? 0) * 7 - (right.id === previousId ? 28 : 0);
     if (rightScore !== leftScore) return rightScore - leftScore;
     const leftTie = hash(`${weekStart}|${dayIndex}|${kind}|${left.id}`);
     const rightTie = hash(`${weekStart}|${dayIndex}|${kind}|${right.id}`);
@@ -151,7 +182,12 @@ function rankCandidates(
   });
 }
 
-function safeAlternativeTitles(selection: PlanSelection, profile: OnboardingProfile, weekStart: string): string[] {
+function safeAlternativeTitles(
+  selection: PlanSelection,
+  profile: OnboardingProfile,
+  weekStart: string,
+  adjustments?: FeedbackAdjustment,
+): string[] {
   return rankCandidates(
     selection.candidates.filter((candidate) => candidate.id !== selection.meal.id),
     profile,
@@ -159,6 +195,8 @@ function safeAlternativeTitles(selection: PlanSelection, profile: OnboardingProf
     selection.kind,
     weekStart,
     new Map(),
+    undefined,
+    adjustments,
   ).slice(0, 1).map((candidate) => candidate.title);
 }
 
@@ -172,16 +210,22 @@ function totalCost(selections: PlanSelection[]): number {
   return Number(selections.reduce((total, selection) => total + selection.meal.estimatedCost, 0).toFixed(2));
 }
 
-function reduceToBudget(selections: PlanSelection[], profile: OnboardingProfile, budget: number, weekStart: string): boolean {
+function reduceToBudget(
+  selections: PlanSelection[],
+  profile: OnboardingProfile,
+  budget: number,
+  weekStart: string,
+  adjustments?: FeedbackAdjustment,
+): boolean {
   let estimatedCost = totalCost(selections);
   while (estimatedCost > budget) {
     const options = selections.flatMap((selection, selectionIndex) => {
-      const currentScore = preferenceScore(selection.meal, profile, selection.dayIndex >= 5);
+      const currentScore = preferenceScore(selection.meal, profile, selection.dayIndex >= 5, adjustments);
       return selection.candidates
         .filter((candidate) => candidate.id !== selection.meal.id && candidate.estimatedCost < selection.meal.estimatedCost)
         .map((candidate) => {
           const saving = selection.meal.estimatedCost - candidate.estimatedCost;
-          const preferenceLoss = currentScore - preferenceScore(candidate, profile, selection.dayIndex >= 5);
+          const preferenceLoss = currentScore - preferenceScore(candidate, profile, selection.dayIndex >= 5, adjustments);
           return {
             candidate,
             selectionIndex,
@@ -201,7 +245,11 @@ function reduceToBudget(selections: PlanSelection[], profile: OnboardingProfile,
   return true;
 }
 
-export function generateWeekPlan(profile: OnboardingProfile, week: PlanWeekInput): GeneratedWeekPlan {
+export function generateWeekPlan(
+  profile: OnboardingProfile,
+  week: PlanWeekInput,
+  adjustments?: FeedbackAdjustment,
+): GeneratedWeekPlan {
   const weekStart = normalizeWeekStart(week);
   const dates = getLocalWeekDates(parseLocalDateKey(weekStart) ?? new Date());
   const usedCounts = new Map<string, number>();
@@ -220,7 +268,7 @@ export function generateWeekPlan(profile: OnboardingProfile, week: PlanWeekInput
       const candidates = mealTemplates.filter((template) => template.kind === kind)
         .filter((template) => !isForbidden(template, profile))
         .filter((template) => canUseTemplate(template, profile, dayIndex >= 5));
-      const ranked = rankCandidates(candidates, profile, dayIndex, kind, weekStart, usedCounts, previousId);
+      const ranked = rankCandidates(candidates, profile, dayIndex, kind, weekStart, usedCounts, previousId, adjustments);
       const meal = ranked[0];
       if (!meal) {
         warnings.push(`${dayNames[dayIndex]}${kindLabels[kind]}暂时没有同时满足当前条件的餐食模板。`);
@@ -235,7 +283,7 @@ export function generateWeekPlan(profile: OnboardingProfile, week: PlanWeekInput
   const budget = parseBudget(profile.weeklyFoodBudget);
   let estimatedCost = totalCost(selections);
   if (budget !== null && estimatedCost > budget) {
-    const reduced = reduceToBudget(selections, profile, budget, weekStart);
+    const reduced = reduceToBudget(selections, profile, budget, weekStart, adjustments);
     estimatedCost = totalCost(selections);
     if (!reduced || estimatedCost > budget) {
       warnings.push(`当前模板池无法在每周 ${budget} 元内同时满足全部条件，已保留最接近的可行组合。`);
@@ -247,7 +295,7 @@ export function generateWeekPlan(profile: OnboardingProfile, week: PlanWeekInput
     date: getLocalDateKey(date),
     meals: selections.filter((selection) => selection.dayIndex === dayIndex).map((selection) => ({
       ...selection.meal,
-      alternatives: safeAlternativeTitles(selection, profile, weekStart),
+      alternatives: safeAlternativeTitles(selection, profile, weekStart, adjustments),
     })),
   }));
   const rulesCannotSatisfy = warnings.length > 0;
@@ -263,5 +311,6 @@ export function generateWeekPlan(profile: OnboardingProfile, week: PlanWeekInput
     rulesCannotSatisfy,
     status: rulesCannotSatisfy ? "rules-cannot-satisfy" : "ready",
     warnings,
+    ...(adjustments ? { adjustmentSummary: adjustments.explanations } : {}),
   };
 }

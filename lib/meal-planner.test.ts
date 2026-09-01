@@ -4,6 +4,7 @@ import type { OnboardingProfile } from "@/types";
 import { mealTemplates } from "./meal-templates";
 import { generateWeekPlan } from "./meal-planner";
 import { deriveShoppingList } from "./shopping-list";
+import { aggregateFeedbackForWeek } from "./feedback-adjustments";
 
 const busyProfile: OnboardingProfile = {
   age: "32",
@@ -51,6 +52,26 @@ const week = "2026-09-07";
 
 function mealsOf(plan: ReturnType<typeof generateWeekPlan>) {
   return plan.days.flatMap((day) => day.meals);
+}
+
+function feedback(date: string, reasons: string[]) {
+  return {
+    date,
+    submittedAt: Date.parse(`${date}T18:00:00`),
+    executionStatus: "partial" as const,
+    snackLevel: "none" as const,
+    deviationReasons: reasons,
+    otherReason: "",
+  };
+}
+
+function weekdayAveragePrep(plan: ReturnType<typeof generateWeekPlan>): number {
+  const meals = plan.days.slice(0, 5).flatMap((day) => day.meals);
+  return meals.reduce((total, meal) => total + meal.prepMinutes, 0) / meals.length;
+}
+
+function weekdayCost(plan: ReturnType<typeof generateWeekPlan>): number {
+  return plan.days.slice(0, 5).flatMap((day) => day.meals).reduce((total, meal) => total + meal.estimatedCost, 0);
 }
 
 test("不同现实画像会生成不同的周方案", () => {
@@ -248,4 +269,79 @@ test("通常不做饭不会因周末有时间而选中烹饪模板", () => {
   const weekendMeals = plan.days.slice(5).flatMap((day) => day.meals);
 
   assert.ok(weekendMeals.every((meal) => meal.kitchenCapabilities.length === 0));
+});
+
+test("没有反馈时下一周仍使用正常 planner 且结果稳定", () => {
+  const source = generateWeekPlan(homeProfile, week);
+  const adjustments = aggregateFeedbackForWeek([], source);
+  const first = generateWeekPlan(homeProfile, "2026-09-14");
+  const second = generateWeekPlan(homeProfile, "2026-09-14");
+
+  assert.equal(adjustments.explanations.length, 0);
+  assert.deepEqual(first, second);
+  assert.deepEqual(first, generateWeekPlan(homeProfile, "2026-09-14", undefined));
+});
+
+test("多次没时间后下一周工作日平均准备时间可验证下降", () => {
+  const source = generateWeekPlan(homeProfile, week);
+  const feedbackEntries = ["2026-09-07", "2026-09-08", "2026-09-09"].map((date) => feedback(date, ["没时间"]));
+  const adjustments = aggregateFeedbackForWeek(feedbackEntries, source);
+  const normal = generateWeekPlan(homeProfile, "2026-09-14");
+  const adjusted = generateWeekPlan(homeProfile, "2026-09-14", adjustments);
+
+  assert.ok(weekdayAveragePrep(adjusted) < weekdayAveragePrep(normal));
+  assert.match(adjusted.adjustmentSummary?.[0] ?? "", /更快/);
+});
+
+test("多次太贵后下一周在可行模板范围内成本倾向下降", () => {
+  const source = generateWeekPlan(homeProfile, week);
+  const feedbackEntries = ["2026-09-07", "2026-09-08", "2026-09-09"].map((date) => feedback(date, ["太贵"]));
+  const adjustments = aggregateFeedbackForWeek(feedbackEntries, source);
+  const normal = generateWeekPlan(homeProfile, "2026-09-14");
+  const adjusted = generateWeekPlan(homeProfile, "2026-09-14", adjustments);
+
+  assert.ok(weekdayCost(adjusted) < weekdayCost(normal));
+  assert.match(adjusted.adjustmentSummary?.[0] ?? "", /更省/);
+});
+
+test("临时聚餐不会错误触发整周惩罚", () => {
+  const source = generateWeekPlan(homeProfile, week);
+  const adjustments = aggregateFeedbackForWeek([feedback("2026-09-07", ["临时聚餐"])], source);
+
+  assert.equal(adjustments.timePressure, 0);
+  assert.equal(adjustments.simplicity, 0);
+  assert.equal(adjustments.availability, 0);
+  assert.equal(adjustments.costSensitivity, 0);
+  assert.deepEqual(adjustments.explanations, []);
+  assert.deepEqual(generateWeekPlan(homeProfile, "2026-09-14"), generateWeekPlan(homeProfile, "2026-09-14", undefined));
+});
+
+test("不喜欢只降低相关主餐再次出现，不修改永久 dislikedFoods", () => {
+  const source = generateWeekPlan(homeProfile, week);
+  const adjustments = aggregateFeedbackForWeek([feedback("2026-09-07", ["不喜欢"])], source);
+  const normal = generateWeekPlan(homeProfile, "2026-09-14");
+  const adjusted = generateWeekPlan(homeProfile, "2026-09-14", adjustments);
+  const dislikedId = adjustments.dislikedMealIds[0];
+
+  assert.ok(dislikedId);
+  assert.ok(mealsOf(normal).some((meal) => meal.id === dislikedId));
+  assert.equal(mealsOf(adjusted).some((meal) => meal.id === dislikedId), false);
+  assert.equal(homeProfile.dislikedFoods, "");
+});
+
+test("反馈调整不能绕过过敏、厨房能力和准备时间硬约束", () => {
+  const source = generateWeekPlan(busyProfile, week);
+  const adjustments = aggregateFeedbackForWeek([
+    feedback("2026-09-07", ["没时间", "太麻烦", "太贵"]),
+    feedback("2026-09-08", ["没时间"]),
+  ], source);
+  const profile = { ...busyProfile, dietaryRestrictions: "对鸡蛋过敏" };
+  const adjusted = generateWeekPlan(profile, "2026-09-14", adjustments);
+
+  for (const meal of mealsOf(adjusted)) {
+    const text = [meal.title, ...meal.ingredients, ...meal.alternatives].join(" ");
+    assert.equal(text.includes("鸡蛋") || text.includes("茶叶蛋"), false);
+    assert.ok(meal.prepMinutes <= 10);
+    assert.ok(meal.kitchenCapabilities.every((capability) => profile.kitchenCapabilities.includes(capability)));
+  }
 });

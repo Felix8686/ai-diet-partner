@@ -65,10 +65,11 @@ export default function OnboardingPage() {
       return;
     }
 
-    const plan = generateWeekPlan(profile, getLocalWeekStartKey());
+    const weekStart = getLocalWeekStartKey();
+    const plan = generateWeekPlan(profile, weekStart);
     saveProfile(profile);
     saveWeeklyPlan(plan);
-    saveShoppingList(deriveShoppingList(plan));
+    saveShoppingList(weekStart, deriveShoppingList(plan));
     router.push("/week");
   }
 
