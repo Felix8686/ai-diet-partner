@@ -17,3 +17,17 @@ MVP foundation：PWA 前端骨架、3 步建档、本周方案、采购清单、
 - 外食是正常场景，不视为偏离。
 
 详细约束见 `AGENTS.md` 与 `docs/PRODUCT.md`。
+
+## 云端试用版
+
+当前试用版使用 Cloudflare Pages 静态部署；方案、采购勾选和每日反馈仍只保存在当前浏览器的 localStorage，不提供登录、云同步或服务端状态。
+
+```bash
+npm install
+npm run lint
+npm test
+npm run build
+npm run deploy
+```
+
+`npm run deploy` 会把 `out/` 发布到 Cloudflare Pages 项目 `ai-diet-partner`。首次部署前需在已登录 Wrangler 的 Cloudflare 账号中创建同名 Pages 项目；不要把任何密钥写入仓库。
