@@ -1,9 +1,13 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Goal, OnboardingProfile } from "@/types";
+import { getLocalWeekStartKey } from "@/lib/local-calendar";
+import { generateWeekPlan } from "@/lib/meal-planner";
+import { deriveShoppingList } from "@/lib/shopping-list";
+import { loadProfile, saveProfile, saveShoppingList, saveWeeklyPlan } from "@/lib/storage";
 
 const titles = ["身体与目标", "现实生活条件", "平时怎么吃"];
 
@@ -37,6 +41,11 @@ export default function OnboardingPage() {
   const [profile, setProfile] = useState<OnboardingProfile>(initialProfile);
   const router = useRouter();
 
+  useEffect(() => {
+    const savedProfile = loadProfile();
+    if (savedProfile) setProfile(savedProfile);
+  }, []);
+
   function updateField<K extends keyof OnboardingProfile>(field: K, value: OnboardingProfile[K]) {
     setProfile((current) => ({ ...current, [field]: value }));
   }
@@ -56,7 +65,10 @@ export default function OnboardingPage() {
       return;
     }
 
-    window.localStorage.setItem("ai-diet-profile", JSON.stringify(profile));
+    const plan = generateWeekPlan(profile, getLocalWeekStartKey());
+    saveProfile(profile);
+    saveWeeklyPlan(plan);
+    saveShoppingList(deriveShoppingList(plan));
     router.push("/week");
   }
 

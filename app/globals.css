@@ -102,6 +102,7 @@ fieldset > label { display: block; margin-top: 10px; }
 .formHint, .fieldHint { color: var(--muted); font-size: 13px; line-height: 1.5; }
 .fieldHint { margin: 10px 0 0; }
 .formError { margin: 0; padding: 10px 12px; border-radius: 11px; background: #fff3f1; color: #a14d43; font-size: 13px; line-height: 1.5; }
+.planNotice { margin: 0 0 14px; padding: 10px 12px; border-radius: 11px; background: #fff9e8; color: #846a2c; font-size: 13px; line-height: 1.5; }
 .formActions { display: flex; gap: 10px; padding-top: 16px; }
 .formActions a { display: flex; align-items: center; justify-content: center; text-align: center; }
 .formStack > label:focus-within, fieldset:focus-within { border-color: #a9d3a4; box-shadow: 0 0 0 3px rgba(63, 143, 59, .1); }

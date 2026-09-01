@@ -1,19 +1,37 @@
 export type MealKind = "breakfast" | "lunch" | "dinner" | "snack";
 
-export type MealPlanItem = {
+export type MealTemplate = {
   id: string;
   kind: MealKind;
   title: string;
   scene: string;
   timeHint?: string;
   prepMinutes: number;
+  kitchenCapabilities: string[];
+  estimatedCost: number;
+  ingredients: string[];
+  tags: string[];
   note?: string;
   alternatives: string[];
 };
 
+export type MealPlanItem = MealTemplate;
+
 export type DayPlan = {
   day: string;
+  date: string;
   meals: MealPlanItem[];
+};
+
+export type GeneratedWeekPlan = {
+  weekStart: string;
+  days: DayPlan[];
+  strategy: string;
+  estimatedCost: number;
+  budget: number | null;
+  rulesCannotSatisfy: boolean;
+  status: "ready" | "rules-cannot-satisfy";
+  warnings: string[];
 };
 
 export type ShoppingItem = {
@@ -56,4 +74,9 @@ export type FeedbackDraft = {
   snackLevel: SnackLevel | "";
   deviationReasons: string[];
   otherReason: string;
+};
+
+export type StoredFeedback = FeedbackDraft & {
+  date: string;
+  submittedAt: number;
 };

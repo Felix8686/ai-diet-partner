@@ -1,0 +1,149 @@
+import type { GeneratedWeekPlan, MealPlanItem, OnboardingProfile, ShoppingItem, StoredFeedback } from "@/types";
+
+export const STORAGE_KEYS = {
+  profile: "ai-diet-profile",
+  weeklyPlan: "ai-diet-weekly-plan",
+  shoppingList: "ai-diet-shopping-list",
+  feedback: (date: string) => `ai-diet-feedback-${date}`,
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isProfile(value: unknown): value is OnboardingProfile {
+  return isRecord(value)
+    && typeof value.age === "string"
+    && typeof value.sex === "string"
+    && typeof value.heightCm === "string"
+    && typeof value.weightKg === "string"
+    && typeof value.goal === "string"
+    && typeof value.weeklyFoodBudget === "string"
+    && typeof value.weekdayCookTime === "string"
+    && typeof value.weekdayWeekendDifference === "string"
+    && typeof value.outsideMealRatio === "string"
+    && Array.isArray(value.mealScenes)
+    && typeof value.likedFoods === "string"
+    && typeof value.dislikedFoods === "string"
+    && typeof value.dietaryRestrictions === "string"
+    && typeof value.breakfastPattern === "string"
+    && typeof value.lateNightSnack === "string"
+    && typeof value.snackHabit === "string"
+    && Array.isArray(value.kitchenCapabilities)
+    && typeof value.shoppingPlace === "string";
+}
+
+function isMeal(value: unknown): value is MealPlanItem {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.kind === "string"
+    && typeof value.title === "string"
+    && typeof value.scene === "string"
+    && typeof value.prepMinutes === "number"
+    && Array.isArray(value.kitchenCapabilities)
+    && typeof value.estimatedCost === "number"
+    && Array.isArray(value.ingredients)
+    && Array.isArray(value.tags)
+    && Array.isArray(value.alternatives);
+}
+
+function isWeeklyPlan(value: unknown): value is GeneratedWeekPlan {
+  return isRecord(value)
+    && typeof value.weekStart === "string"
+    && Array.isArray(value.days)
+    && value.days.every((day) => isRecord(day) && typeof day.day === "string" && typeof day.date === "string" && Array.isArray(day.meals) && day.meals.every(isMeal))
+    && typeof value.strategy === "string"
+    && typeof value.estimatedCost === "number"
+    && (value.budget === null || typeof value.budget === "number")
+    && typeof value.rulesCannotSatisfy === "boolean"
+    && (value.status === "ready" || value.status === "rules-cannot-satisfy")
+    && Array.isArray(value.warnings);
+}
+
+function isShoppingItem(value: unknown): value is ShoppingItem {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.category === "string"
+    && typeof value.name === "string"
+    && typeof value.amount === "string"
+    && typeof value.purchased === "boolean"
+    && (value.price === undefined || typeof value.price === "number");
+}
+
+function isFeedback(value: unknown): value is Omit<StoredFeedback, "date" | "submittedAt"> & Partial<Pick<StoredFeedback, "date" | "submittedAt">> {
+  return isRecord(value)
+    && (value.executionStatus === "completed" || value.executionStatus === "partial" || value.executionStatus === "skipped")
+    && (value.snackLevel === "none" || value.snackLevel === "little" || value.snackLevel === "more")
+    && Array.isArray(value.deviationReasons)
+    && (value.otherReason === undefined || typeof value.otherReason === "string")
+    && (value.date === undefined || typeof value.date === "string")
+    && (value.submittedAt === undefined || typeof value.submittedAt === "number");
+}
+
+function readJson(key: string): unknown {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw === null ? null : JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function writeJson(key: string, value: unknown): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage may be unavailable or full; the UI can continue with in-memory state.
+  }
+}
+
+export function loadProfile(): OnboardingProfile | null {
+  const value = readJson(STORAGE_KEYS.profile);
+  return isProfile(value) ? value : null;
+}
+
+export function saveProfile(profile: OnboardingProfile): void {
+  writeJson(STORAGE_KEYS.profile, profile);
+}
+
+export function loadWeeklyPlan(weekStart?: string): GeneratedWeekPlan | null {
+  const value = readJson(STORAGE_KEYS.weeklyPlan);
+  if (!isWeeklyPlan(value)) return null;
+  return weekStart && value.weekStart !== weekStart ? null : value;
+}
+
+export function saveWeeklyPlan(plan: GeneratedWeekPlan): void {
+  writeJson(STORAGE_KEYS.weeklyPlan, plan);
+}
+
+export function loadShoppingList(): ShoppingItem[] {
+  const value = readJson(STORAGE_KEYS.shoppingList);
+  return Array.isArray(value) && value.every(isShoppingItem) ? value : [];
+}
+
+export function saveShoppingList(items: ShoppingItem[]): void {
+  writeJson(STORAGE_KEYS.shoppingList, items);
+}
+
+export function loadDailyFeedback(date: string): StoredFeedback | null {
+  const value = readJson(STORAGE_KEYS.feedback(date));
+  if (!isFeedback(value)) return null;
+  return {
+    executionStatus: value.executionStatus,
+    snackLevel: value.snackLevel,
+    deviationReasons: value.deviationReasons.filter((reason): reason is string => typeof reason === "string"),
+    otherReason: value.otherReason ?? "",
+    date: value.date ?? date,
+    submittedAt: value.submittedAt ?? 0,
+  };
+}
+
+export function saveDailyFeedback(date: string, feedback: StoredFeedback | Omit<StoredFeedback, "date" | "submittedAt">): void {
+  writeJson(STORAGE_KEYS.feedback(date), {
+    ...feedback,
+    date,
+    submittedAt: "submittedAt" in feedback ? feedback.submittedAt : Date.now(),
+  });
+}

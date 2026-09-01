@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "./bottom-nav";
-import type { MealKind, MealPlanItem } from "@/types";
+import type { GeneratedWeekPlan, MealKind, MealPlanItem } from "@/types";
 import { getHomePeriod, type HomePeriod } from "@/lib/home-view";
-import { getLocalTodayIndex } from "@/lib/local-calendar";
-import { weekPlan } from "@/lib/mock-data";
+import { getLocalTodayIndex, getLocalWeekStartKey } from "@/lib/local-calendar";
+import { loadWeeklyPlan } from "@/lib/storage";
 
 const periods = [
   { id: "morning", label: "早上", range: "早餐" },
@@ -54,16 +54,34 @@ function MealCard({ meal, focus = false }: { meal: MealPlanItem; focus?: boolean
 
 export function HomeScreen() {
   const [now, setNow] = useState(() => new Date());
+  const [plan, setPlan] = useState<GeneratedWeekPlan | null | undefined>(undefined);
   useEffect(() => {
     const updateTime = () => setNow(new Date());
     updateTime();
     const timer = window.setInterval(updateTime, 60_000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => {
+    setPlan(loadWeeklyPlan(getLocalWeekStartKey()));
+  }, []);
+
+  if (plan === undefined) {
+    return <main className="appShell withNav"><header className="pageHeader homeHeader"><p className="homeKicker">正在准备</p><h1>读取你的本周方案</h1><p>马上就好。</p></header><BottomNav /></main>;
+  }
+
+  if (plan === null) {
+    return (
+      <main className="appShell withNav">
+        <header className="pageHeader homeHeader"><p className="homeKicker">先从这里开始</p><h1>先告诉我你的日常</h1><p>完成三步建档后，我会按你的时间、预算和吃饭环境安排这一周。</p></header>
+        <section className="feedbackPrompt"><h2>还没有本周方案</h2><p>先完成建档，之后就能看到今天怎么吃。</p><Link href="/onboarding" className="primaryButton">开始三步建档</Link></section>
+        <BottomNav />
+      </main>
+    );
+  }
 
   const hour = now.getHours();
   const period = getHomePeriod(hour);
-  const meals = weekPlan[getLocalTodayIndex(now)].meals;
+  const meals = plan.days[getLocalTodayIndex(now)]?.meals ?? [];
   const breakfast = findMeal(meals, "breakfast");
   const lunch = findMeal(meals, "lunch");
   const dinner = findMeal(meals, "dinner");
@@ -89,6 +107,8 @@ export function HomeScreen() {
         <div className="sectionHeading">
           <h2>接下来怎么吃</h2>
         </div>
+        {plan.rulesCannotSatisfy && <p className="planNotice">有些现实条件暂时无法同时满足，已保留当前能执行的选择；调整资料后可以重新生成。</p>}
+        {!breakfast && !lunch && !dinner && <p className="emptyState">今天暂时没有符合当前条件的餐食模板，回到资料里调整后再生成一次。</p>}
 
         {period === "morning" && breakfast && lunch && dinner && (
           <>
