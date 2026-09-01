@@ -34,3 +34,17 @@ export function deriveShoppingList(plan: GeneratedWeekPlan): ShoppingItem[] {
       purchased: false,
     }));
 }
+
+export function mergeShoppingListPreservingPurchased(
+  previousItems: ShoppingItem[],
+  nextItems: ShoppingItem[],
+): ShoppingItem[] {
+  const purchasedNames = new Set(
+    previousItems.filter((item) => item.purchased).map((item) => item.name.trim()),
+  );
+
+  return nextItems.map((item) => ({
+    ...item,
+    purchased: purchasedNames.has(item.name.trim()),
+  }));
+}

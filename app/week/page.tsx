@@ -4,14 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "@/components/bottom-nav";
 import type { GeneratedWeekPlan } from "@/types";
-import { aggregateFeedbackForWeek } from "@/lib/feedback-adjustments";
-import { deriveShoppingList } from "@/lib/shopping-list";
 import { formatLocalDateKey, getAdjacentWeekStartKey, getLocalTodayIndex, getLocalWeekStartKey } from "@/lib/local-calendar";
-import { generateWeekPlan } from "@/lib/meal-planner";
-import { loadFeedbackForWeek, loadProfile, loadWeeklyPlan, saveShoppingList, saveWeeklyPlan } from "@/lib/storage";
+import { loadFeedbackForWeek, loadProfile, loadShoppingList, loadWeeklyPlan, saveShoppingList, saveWeeklyPlan } from "@/lib/storage";
+import { refreshNextWeekPlan } from "@/lib/week-plan-refresh";
+import { isTodayInWeekView, type WeekView } from "@/lib/week-view";
 
 const labels: Record<string, string> = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐", snack: "加餐" };
-type WeekView = "current" | "next";
 
 export default function WeekPage() {
   const [plans, setPlans] = useState<Record<WeekView, GeneratedWeekPlan | null> | undefined>(undefined);
@@ -39,16 +37,24 @@ export default function WeekPage() {
 
     setGenerating(true);
     setError("");
-    const feedback = loadFeedbackForWeek(currentWeekStart);
-    const adjustments = aggregateFeedbackForWeek(feedback, plans.current);
-    const hasEffectiveAdjustments = adjustments.explanations.length > 0;
-    const nextPlan = generateWeekPlan(profile, nextWeekStart, hasEffectiveAdjustments ? adjustments : undefined);
-    saveWeeklyPlan(nextPlan);
-    saveShoppingList(nextWeekStart, deriveShoppingList(nextPlan));
-    setPlans((current) => current ? { ...current, next: nextPlan } : current);
-    setSelectedWeek("next");
-    setSelected(0);
-    setGenerating(false);
+    try {
+      const refreshed = refreshNextWeekPlan(
+        profile,
+        plans.current,
+        nextWeekStart,
+        loadFeedbackForWeek(currentWeekStart),
+        loadShoppingList(nextWeekStart),
+      );
+      saveWeeklyPlan(refreshed.plan);
+      saveShoppingList(nextWeekStart, refreshed.shoppingList);
+      setPlans((current) => current ? { ...current, next: refreshed.plan } : current);
+      setSelectedWeek("next");
+      setSelected(0);
+    } catch {
+      setError("下周方案更新失败，请稍后再试。");
+    } finally {
+      setGenerating(false);
+    }
   }
 
   if (plans === undefined) {
@@ -86,10 +92,11 @@ export default function WeekPage() {
     );
   }
 
-  const todayIndex = selectedWeek === "current" ? getLocalTodayIndex() : 0;
+  const todayIndex = getLocalTodayIndex();
   const safeSelected = Math.min(selected, plan.days.length - 1);
   const day = plan.days[safeSelected];
   const nextPlan = plans.next;
+  const selectedDayIsToday = isTodayInWeekView(selectedWeek, safeSelected, todayIndex);
 
   return (
     <main className="appShell withNav">
@@ -117,7 +124,7 @@ export default function WeekPage() {
 
       <div className="dayTabs" role="tablist">
         {plan.days.map((item, index) => (
-          <button type="button" role="tab" aria-selected={safeSelected === index} aria-controls="selected-day" aria-label={`${item.day} ${formatLocalDateKey(item.date)}${todayIndex === index ? "，今天" : ""}`} key={item.date} onClick={() => setSelected(index)} className={safeSelected === index ? "dayTab active" : "dayTab"}>
+          <button type="button" role="tab" aria-selected={safeSelected === index} aria-controls="selected-day" aria-label={`${item.day} ${formatLocalDateKey(item.date)}${isTodayInWeekView(selectedWeek, index, todayIndex) ? "，今天" : ""}`} key={item.date} onClick={() => setSelected(index)} className={safeSelected === index ? "dayTab active" : "dayTab"}>
             <strong>{item.day}</strong><span>{formatLocalDateKey(item.date)}</span>
           </button>
         ))}
@@ -125,7 +132,7 @@ export default function WeekPage() {
 
       <section className="sectionBlock" id="selected-day" role="tabpanel">
         <div className="sectionHeading compact">
-          <div><p className="sectionEyebrow">当前选择</p><h2>{day.day} · {safeSelected === todayIndex ? "今天" : formatLocalDateKey(day.date)}</h2></div>
+          <div><p className="sectionEyebrow">当前选择</p><h2>{day.day} · {selectedDayIsToday ? "今天" : formatLocalDateKey(day.date)}</h2></div>
           <Link className="textButton" href={`/shopping?week=${selectedWeek === "current" ? currentWeekStart : nextWeekStart}`}>去采购</Link>
         </div>
         {plan.rulesCannotSatisfy && <p className="planNotice">{plan.warnings[0] ?? "有些现实条件暂时无法同时满足，已保留当前能执行的选择。"}</p>}
@@ -147,7 +154,7 @@ export default function WeekPage() {
           <h2>{nextPlan ? "下周方案已准备好" : "看看下周怎么调整"}</h2>
           <p>{nextPlan ? "下周方案已单独保存，本周的采购勾选不会被覆盖。" : "提交本周反馈后，我会把下一周安排得更容易执行。"}</p>
           {error && <p className="formError" role="alert">{error}</p>}
-          {nextPlan ? <button className="secondaryButton" type="button" onClick={() => { setSelectedWeek("next"); setSelected(0); }}>查看下周方案</button> : <button className="primaryButton" type="button" disabled={generating} onClick={generateNextWeek}>{generating ? "正在生成" : "看看下周怎么调整"}</button>}
+          {nextPlan ? <div className="formActions"><button className="secondaryButton" type="button" onClick={() => { setSelectedWeek("next"); setSelected(0); }}>查看下周方案</button><button className="primaryButton" type="button" disabled={generating} onClick={generateNextWeek}>{generating ? "正在更新" : "根据最新反馈更新"}</button></div> : <button className="primaryButton" type="button" disabled={generating} onClick={generateNextWeek}>{generating ? "正在生成" : "看看下周怎么调整"}</button>}
         </section>
       )}
 
