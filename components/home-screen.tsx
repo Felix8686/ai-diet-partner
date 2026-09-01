@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "./bottom-nav";
-import type { GeneratedWeekPlan, MealKind, MealPlanItem } from "@/types";
-import { getEveningContent, getHomeMeals, getHomePeriod, type HomePeriod } from "@/lib/home-view";
+import type { GeneratedWeekPlan, MealKind, MealPlanItem, OnboardingProfile } from "@/types";
+import { getEveningContent, getHomeMeals, getHomePeriod, getMorningHomeState, type HomePeriod } from "@/lib/home-view";
 import { getLocalTodayIndex, getLocalWeekStartKey } from "@/lib/local-calendar";
-import { loadWeeklyPlan } from "@/lib/storage";
+import { loadProfile, loadWeeklyPlan } from "@/lib/storage";
 
 const periods = [
   { id: "morning", label: "早上", range: "早餐" },
@@ -63,6 +63,7 @@ function DailyFeedbackPrompt() {
 export function HomeScreen() {
   const [now, setNow] = useState(() => new Date());
   const [plan, setPlan] = useState<GeneratedWeekPlan | null | undefined>(undefined);
+  const [profile, setProfile] = useState<OnboardingProfile | null | undefined>(undefined);
   useEffect(() => {
     const updateTime = () => setNow(new Date());
     updateTime();
@@ -71,9 +72,10 @@ export function HomeScreen() {
   }, []);
   useEffect(() => {
     setPlan(loadWeeklyPlan(getLocalWeekStartKey()));
+    setProfile(loadProfile());
   }, []);
 
-  if (plan === undefined) {
+  if (plan === undefined || profile === undefined) {
     return <main className="appShell withNav"><header className="pageHeader homeHeader"><p className="homeKicker">正在准备</p><h1>读取你的本周方案</h1><p>马上就好。</p></header><BottomNav /></main>;
   }
 
@@ -90,13 +92,16 @@ export function HomeScreen() {
   const hour = now.getHours();
   const period = getHomePeriod(hour);
   const meals = plan.days[getLocalTodayIndex(now)]?.meals ?? [];
-  const { breakfast, lunch, dinner } = getHomeMeals(meals);
+  const homeMeals = getHomeMeals(meals);
+  const morningState = getMorningHomeState(homeMeals, profile?.breakfastPattern);
+  const { lunch, dinner } = homeMeals;
+  const breakfast = morningState.breakfastSkipped ? undefined : homeMeals.breakfast;
   const eveningContent = getEveningContent(Boolean(dinner));
 
   return (
     <main className="appShell withNav">
       <header className="pageHeader homeHeader">
-        <p className="homeKicker">{period === "morning" ? "先看早餐" : period === "noon" ? "午餐时间" : "晚餐安排"}</p>
+        <p className="homeKicker">{period === "morning" ? (morningState.breakfastSkipped ? "午餐时间" : "先看早餐") : period === "noon" ? "午餐时间" : "晚餐安排"}</p>
         <h1>{greeting(hour)}</h1>
         <p>按你今天的时间，先把下一顿安排好。</p>
       </header>
@@ -119,8 +124,8 @@ export function HomeScreen() {
 
         {period === "morning" && (
           <>
-            {breakfast ? <MealCard meal={breakfast} focus /> : <MissingMeal kind="breakfast" />}
-            {lunch ? <MealCard meal={lunch} /> : <MissingMeal kind="lunch" />}
+            {breakfast ? <MealCard meal={breakfast} focus={morningState.focusKind === "breakfast"} /> : morningState.showMissingBreakfast && <MissingMeal kind="breakfast" />}
+            {lunch ? <MealCard meal={lunch} focus={morningState.focusKind === "lunch"} /> : <MissingMeal kind="lunch" />}
             {dinner ? <article className="previewRow"><div><strong>晚餐预览</strong><span>{dinner.scene}</span></div><p>{dinner.title} · 准备 {dinner.prepMinutes} 分钟</p></article> : <MissingMeal kind="dinner" />}
           </>
         )}

@@ -8,6 +8,12 @@ export type HomeMeals = {
   dinner?: MealPlanItem;
 };
 
+export type MorningHomeState = {
+  breakfastSkipped: boolean;
+  focusKind: "breakfast" | "lunch";
+  showMissingBreakfast: boolean;
+};
+
 export type EveningContent = "dinner" | "missing-dinner" | "feedback";
 
 export function getHomePeriod(hour: number): HomePeriod {
@@ -29,6 +35,15 @@ export function getHomeMeals(meals: MealPlanItem[]): HomeMeals {
     breakfast: meals.find((meal) => meal.kind === "breakfast"),
     lunch: meals.find((meal) => meal.kind === "lunch"),
     dinner: meals.find((meal) => meal.kind === "dinner"),
+  };
+}
+
+export function getMorningHomeState(meals: HomeMeals, breakfastPattern: string | null | undefined): MorningHomeState {
+  const breakfastSkipped = breakfastPattern === "通常不吃";
+  return {
+    breakfastSkipped,
+    focusKind: breakfastSkipped && meals.lunch ? "lunch" : "breakfast",
+    showMissingBreakfast: !meals.breakfast && !breakfastSkipped,
   };
 }
 
