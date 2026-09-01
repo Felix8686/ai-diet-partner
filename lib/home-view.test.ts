@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 import type { MealPlanItem } from "@/types";
+import * as homeView from "./home-view";
 import { getHomeMealKinds, getHomeMeals, getHomePeriod } from "./home-view";
 
 function minimalMeal(kind: MealPlanItem["kind"], id: string): MealPlanItem {
@@ -13,6 +14,7 @@ function minimalMeal(kind: MealPlanItem["kind"], id: string): MealPlanItem {
     kitchenCapabilities: [],
     estimatedCost: 0,
     ingredients: [],
+    shoppingItems: [],
     tags: [],
     dietaryTags: [],
     alternatives: [],
@@ -43,4 +45,14 @@ test("首页缺少一个餐别时仍保留其他餐别", () => {
   assert.equal(meals?.breakfast?.id, "breakfast-1");
   assert.equal(meals?.lunch?.id, "lunch-1");
   assert.equal(meals?.dinner, undefined);
+});
+
+test("晚间没有晚餐时仍保留每日反馈入口", () => {
+  const getEveningContent = (homeView as typeof homeView & {
+    getEveningContent?: (hasDinner: boolean) => Array<"dinner" | "missing-dinner" | "feedback">;
+  }).getEveningContent;
+
+  assert.ok(getEveningContent);
+  assert.deepEqual(getEveningContent?.(false), ["missing-dinner", "feedback"]);
+  assert.deepEqual(getEveningContent?.(true), ["dinner", "feedback"]);
 });

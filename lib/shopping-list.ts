@@ -14,7 +14,7 @@ export function deriveShoppingList(plan: GeneratedWeekPlan): ShoppingItem[] {
   const counts = new Map<string, number>();
   for (const day of plan.days) {
     for (const meal of day.meals) {
-      for (const ingredient of meal.ingredients) {
+      for (const ingredient of meal.shoppingItems) {
         const name = ingredient.trim();
         if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
       }

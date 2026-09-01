@@ -147,3 +147,51 @@ test("替换方案也不会出现用户讨厌或禁忌食物", () => {
   assert.equal(mealText.includes("豆腐"), false);
   assert.equal(mealText.includes("花生"), false);
 });
+
+test("每天时间差不多时周末继续遵守工作日准备时间上限", () => {
+  const plan = generateWeekPlan({
+    ...homeProfile,
+    weekdayCookTime: "10 分钟以内",
+    weekdayWeekendDifference: "每天时间差不多",
+  }, week);
+  const weekendMeals = plan.days.slice(5).flatMap((day) => day.meals);
+
+  assert.ok(weekendMeals.every((meal) => meal.prepMinutes <= 10));
+});
+
+test("周末反而更忙时不会因周末日期放宽复杂度", () => {
+  const plan = generateWeekPlan({
+    ...homeProfile,
+    weekdayCookTime: "10 分钟以内",
+    weekdayWeekendDifference: "周末反而更忙",
+  }, week);
+  const weekendMeals = plan.days.slice(5).flatMap((day) => day.meals);
+
+  assert.ok(weekendMeals.every((meal) => meal.prepMinutes <= 10));
+});
+
+test("工作日更忙且周末有时间时，周末画像会参与方案选择", () => {
+  const sameSchedulePlan = generateWeekPlan({
+    ...homeProfile,
+    weekdayCookTime: "10 分钟以内",
+    weekdayWeekendDifference: "每天时间差不多",
+  }, week);
+  const relaxedWeekendPlan = generateWeekPlan({
+    ...homeProfile,
+    weekdayCookTime: "10 分钟以内",
+    weekdayWeekendDifference: "工作日更忙，周末有时间",
+  }, week);
+
+  assert.notDeepEqual(relaxedWeekendPlan.days.slice(5), sameSchedulePlan.days.slice(5));
+});
+
+test("通常不做饭不会因周末有时间而选中烹饪模板", () => {
+  const plan = generateWeekPlan({
+    ...homeProfile,
+    weekdayCookTime: "通常不做饭",
+    weekdayWeekendDifference: "工作日更忙，周末有时间",
+  }, week);
+  const weekendMeals = plan.days.slice(5).flatMap((day) => day.meals);
+
+  assert.ok(weekendMeals.every((meal) => meal.kitchenCapabilities.length === 0));
+});

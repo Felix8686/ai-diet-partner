@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "./bottom-nav";
 import type { GeneratedWeekPlan, MealKind, MealPlanItem } from "@/types";
-import { getHomeMeals, getHomePeriod, type HomePeriod } from "@/lib/home-view";
+import { getEveningContent, getHomeMeals, getHomePeriod, type HomePeriod } from "@/lib/home-view";
 import { getLocalTodayIndex, getLocalWeekStartKey } from "@/lib/local-calendar";
 import { loadWeeklyPlan } from "@/lib/storage";
 
@@ -49,6 +49,17 @@ function MissingMeal({ kind }: { kind: MealKind }) {
   return <p className="mealUnavailable">{mealLabels[kind]}暂时没有合适模板，先看其他餐别。</p>;
 }
 
+function DailyFeedbackPrompt() {
+  return (
+    <section className="feedbackPrompt">
+      <div className="sectionHeading compact">
+        <div><h2>今天吃得怎么样？</h2><p>约 30 秒，告诉我哪里不方便。</p></div>
+      </div>
+      <Link href="/feedback" className="primaryButton">记录今天的情况</Link>
+    </section>
+  );
+}
+
 export function HomeScreen() {
   const [now, setNow] = useState(() => new Date());
   const [plan, setPlan] = useState<GeneratedWeekPlan | null | undefined>(undefined);
@@ -80,6 +91,7 @@ export function HomeScreen() {
   const period = getHomePeriod(hour);
   const meals = plan.days[getLocalTodayIndex(now)]?.meals ?? [];
   const { breakfast, lunch, dinner } = getHomeMeals(meals);
+  const eveningContent = getEveningContent(Boolean(dinner));
 
   return (
     <main className="appShell withNav">
@@ -123,7 +135,9 @@ export function HomeScreen() {
 
         {period === "evening" && (
           <>
-            {dinner ? <><MealCard meal={dinner} focus /><section className="feedbackPrompt"><div className="sectionHeading compact"><div><h2>今天吃得怎么样？</h2><p>约 30 秒，告诉我哪里不方便。</p></div></div><Link href="/feedback" className="primaryButton">记录今天的情况</Link></section></> : <MissingMeal kind="dinner" />}
+            {eveningContent.includes("dinner") && dinner && <MealCard meal={dinner} focus />}
+            {eveningContent.includes("missing-dinner") && <MissingMeal kind="dinner" />}
+            {eveningContent.includes("feedback") && <DailyFeedbackPrompt />}
           </>
         )}
       </section>

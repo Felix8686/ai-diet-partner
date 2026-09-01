@@ -15,6 +15,8 @@ function template(
   timeHint?: string,
 ): MealTemplate {
   const containsAnimalProducts = ingredients.some((ingredient) => /鸡肉|鸡胸|牛肉|鱼|虾|蛋|牛奶|酸奶|奶酪/.test(ingredient));
+  const hasConvenienceScene = scene.includes("便利店");
+  const isProvidedMeal = !hasConvenienceScene && ["公司食堂", "外卖", "外食"].some((providedScene) => scene.includes(providedScene));
   const result: MealTemplate = {
     id,
     kind,
@@ -24,6 +26,7 @@ function template(
     kitchenCapabilities,
     estimatedCost,
     ingredients,
+    shoppingItems: isProvidedMeal ? [] : [...ingredients],
     tags,
     dietaryTags: containsAnimalProducts ? ["contains-animal"] : ["plant-based"],
     alternatives: [alternative],

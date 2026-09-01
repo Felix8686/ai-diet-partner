@@ -10,6 +10,7 @@ export type MealTemplate = {
   kitchenCapabilities: string[];
   estimatedCost: number;
   ingredients: string[];
+  shoppingItems: string[];
   tags: string[];
   dietaryTags: string[];
   note?: string;

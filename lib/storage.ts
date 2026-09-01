@@ -43,6 +43,7 @@ function isMeal(value: unknown): value is MealPlanItem {
     && Array.isArray(value.kitchenCapabilities)
     && typeof value.estimatedCost === "number"
     && Array.isArray(value.ingredients)
+    && (value.shoppingItems === undefined || Array.isArray(value.shoppingItems))
     && Array.isArray(value.tags)
     && (value.dietaryTags === undefined || Array.isArray(value.dietaryTags))
     && Array.isArray(value.alternatives);
@@ -86,9 +87,18 @@ function normalizeWeeklyPlan(plan: GeneratedWeekPlan): GeneratedWeekPlan {
     ...plan,
     days: plan.days.map((day) => ({
       ...day,
-      meals: day.meals.map((meal) => Array.isArray(meal.dietaryTags)
-        ? meal
-        : { ...meal, dietaryTags: [], alternatives: [] }),
+      meals: day.meals.map((meal) => {
+        const shoppingItems = Array.isArray(meal.shoppingItems)
+          ? meal.shoppingItems
+          : meal.scene.includes("便利店")
+            ? meal.ingredients
+            : ["公司食堂", "外卖", "外食"].some((providedScene) => meal.scene.includes(providedScene))
+              ? []
+              : meal.ingredients;
+        return Array.isArray(meal.dietaryTags)
+          ? { ...meal, shoppingItems }
+          : { ...meal, dietaryTags: [], alternatives: [], shoppingItems };
+      }),
     })),
   };
 }

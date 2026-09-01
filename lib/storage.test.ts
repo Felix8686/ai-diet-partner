@@ -118,6 +118,7 @@ test("旧版周方案仍可读取，但无法验证安全性的替换方案会�
     const plan = generateWeekPlan(profile, "2026-09-07");
     const legacyPlan = JSON.parse(JSON.stringify(plan));
     delete legacyPlan.days[0].meals[0].dietaryTags;
+    delete legacyPlan.days[0].meals[0].shoppingItems;
     legacyPlan.days[0].meals[0].alternatives = ["未验证的替换方案"];
     storage.setItem(STORAGE_KEYS.weeklyPlan, JSON.stringify(legacyPlan));
 

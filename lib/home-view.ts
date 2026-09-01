@@ -8,6 +8,8 @@ export type HomeMeals = {
   dinner?: MealPlanItem;
 };
 
+export type EveningContent = "dinner" | "missing-dinner" | "feedback";
+
 export function getHomePeriod(hour: number): HomePeriod {
   const normalizedHour = ((hour % 24) + 24) % 24;
 
@@ -28,4 +30,8 @@ export function getHomeMeals(meals: MealPlanItem[]): HomeMeals {
     lunch: meals.find((meal) => meal.kind === "lunch"),
     dinner: meals.find((meal) => meal.kind === "dinner"),
   };
+}
+
+export function getEveningContent(hasDinner: boolean): EveningContent[] {
+  return hasDinner ? ["dinner", "feedback"] : ["missing-dinner", "feedback"];
 }

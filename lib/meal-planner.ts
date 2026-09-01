@@ -22,6 +22,8 @@ const mealKinds: MealKind[] = ["breakfast", "lunch", "dinner"];
 const outsideScenes = new Set(["公司食堂", "外卖", "便利店", "外食"]);
 const meatTerms = ["鸡肉", "鸡胸", "牛肉", "鱼", "虾", "虾仁"];
 const veganTerms = [...meatTerms, "蛋", "牛奶", "酸奶", "奶酪"];
+const relaxedWeekendDifference = "工作日更忙，周末有时间";
+const busyWeekendDifference = "周末反而更忙";
 
 function hash(value: string): number {
   let result = 2166136261;
@@ -58,6 +60,11 @@ function maxWeekdayPrepMinutes(value: string): number {
   return 30;
 }
 
+function maxAllowedPrepMinutes(profile: OnboardingProfile, isWeekend: boolean): number {
+  const weekdayMax = maxWeekdayPrepMinutes(profile.weekdayCookTime);
+  return isWeekend && profile.weekdayWeekendDifference === relaxedWeekendDifference ? 60 : weekdayMax;
+}
+
 function sceneParts(scene: string): string[] {
   return scene.split(/[ /／、]+/).filter(Boolean);
 }
@@ -86,9 +93,8 @@ function isForbidden(template: MealTemplate, profile: OnboardingProfile): boolea
 function canUseTemplate(template: MealTemplate, profile: OnboardingProfile, isWeekend: boolean): boolean {
   const capabilities = Array.isArray(profile.kitchenCapabilities) ? profile.kitchenCapabilities : [];
   if (!template.kitchenCapabilities.every((capability) => capabilities.includes(capability))) return false;
-  if (isWeekend) return true;
 
-  const maxPrep = maxWeekdayPrepMinutes(profile.weekdayCookTime);
+  const maxPrep = maxAllowedPrepMinutes(profile, isWeekend);
   if (template.prepMinutes > maxPrep) return false;
   if (profile.weekdayCookTime === "通常不做饭" && template.kitchenCapabilities.length > 0) return false;
   return true;
@@ -105,6 +111,12 @@ function preferenceScore(template: MealTemplate, profile: OnboardingProfile, isW
   if (scenes.includes("在家吃")) score += templateScenes.includes("家里") ? 30 : -6;
   if (profile.weekdayCookTime === "通常不做饭") score += template.kitchenCapabilities.length === 0 ? 28 : -30;
   if (!isWeekend && template.prepMinutes <= maxWeekdayPrepMinutes(profile.weekdayCookTime)) score += 8;
+  if (isWeekend && profile.weekdayWeekendDifference === relaxedWeekendDifference
+    && template.prepMinutes > maxWeekdayPrepMinutes(profile.weekdayCookTime)) score += 12;
+  if (isWeekend && profile.weekdayWeekendDifference === busyWeekendDifference) {
+    score -= template.prepMinutes;
+    score -= template.kitchenCapabilities.length * 8;
+  }
   if (template.tags.includes("无烹饪") && profile.weekdayCookTime === "通常不做饭") score += 8;
   score += likes.filter((like) => [template.title, ...template.ingredients].join(" ").toLowerCase().includes(like)).length * 7;
   return score;
