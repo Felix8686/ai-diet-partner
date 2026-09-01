@@ -39,7 +39,7 @@ function terms(value: string): string[] {
     .toLowerCase()
     .replace(/过敏|忌口|不能吃|不吃|不喜欢/g, " ")
     .split(/[、,，;；/／\s]+/)
-    .map((term) => term.trim())
+    .map((term) => term.trim().replace(/^对/, ""))
     .filter(Boolean);
 }
 
@@ -79,7 +79,9 @@ function isForbidden(template: MealTemplate, profile: OnboardingProfile): boolea
   const restrictions = profile.dietaryRestrictions.toLowerCase();
   const templateText = [template.title, ...template.ingredients, ...template.tags].join(" ").toLowerCase();
   const disliked = terms(profile.dislikedFoods);
-  const restrictionTerms = terms(profile.dietaryRestrictions).filter((term) => !["素食", "纯素", "全素"].includes(term));
+  const restrictionTerms = terms(profile.dietaryRestrictions)
+    .filter((term) => !["素食", "纯素", "全素"].includes(term))
+    .flatMap((term) => term === "鸡蛋" ? [term, "蛋"] : [term]);
 
   if ((restrictions.includes("纯素") || restrictions.includes("全素"))
     && (template.dietaryTags.includes("contains-animal")
@@ -107,6 +109,9 @@ function preferenceScore(template: MealTemplate, profile: OnboardingProfile, isW
   let score = 0;
 
   if (templateScenes.some((scene) => scenes.includes(scene))) score += 30;
+  if (template.kind === "lunch" && scenes.includes("自己带饭")) {
+    score += templateScenes.includes("自己带饭") ? 42 : -18;
+  }
   if (isOutsidePreferred(profile)) score += templateScenes.some((scene) => outsideScenes.has(scene)) ? 24 : -8;
   if (scenes.includes("在家吃")) score += templateScenes.includes("家里") ? 30 : -6;
   if (profile.weekdayCookTime === "通常不做饭") score += template.kitchenCapabilities.length === 0 ? 28 : -30;
@@ -116,6 +121,10 @@ function preferenceScore(template: MealTemplate, profile: OnboardingProfile, isW
   if (isWeekend && profile.weekdayWeekendDifference === busyWeekendDifference) {
     score -= template.prepMinutes;
     score -= template.kitchenCapabilities.length * 8;
+  }
+  if (template.kind === "breakfast" && profile.breakfastPattern.includes("有时来不及")) {
+    const isQuickBreakfast = template.prepMinutes <= 5 && template.kitchenCapabilities.length === 0;
+    score += isQuickBreakfast ? 36 : -36;
   }
   if (template.tags.includes("无烹饪") && profile.weekdayCookTime === "通常不做饭") score += 8;
   score += likes.filter((like) => [template.title, ...template.ingredients].join(" ").toLowerCase().includes(like)).length * 7;
@@ -202,7 +211,10 @@ export function generateWeekPlan(profile: OnboardingProfile, week: PlanWeekInput
   const profileScenes = Array.isArray(profile.mealScenes) ? profile.mealScenes : [];
 
   for (let dayIndex = 0; dayIndex < dates.length; dayIndex += 1) {
-    const kinds = snackDaySet.has(dayIndex) ? [...mealKinds, "snack" as const] : mealKinds;
+    const mealKindsForDay = profile.breakfastPattern.includes("通常不吃")
+      ? mealKinds.filter((kind) => kind !== "breakfast")
+      : mealKinds;
+    const kinds = snackDaySet.has(dayIndex) ? [...mealKindsForDay, "snack" as const] : mealKindsForDay;
     let previousId: string | undefined;
     for (const kind of kinds) {
       const candidates = mealTemplates.filter((template) => template.kind === kind)

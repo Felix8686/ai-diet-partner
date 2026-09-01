@@ -3,6 +3,7 @@ import test from "node:test";
 import type { OnboardingProfile } from "@/types";
 import { mealTemplates } from "./meal-templates";
 import { generateWeekPlan } from "./meal-planner";
+import { deriveShoppingList } from "./shopping-list";
 
 const busyProfile: OnboardingProfile = {
   age: "32",
@@ -146,6 +147,59 @@ test("替换方案也不会出现用户讨厌或禁忌食物", () => {
 
   assert.equal(mealText.includes("豆腐"), false);
   assert.equal(mealText.includes("花生"), false);
+});
+
+test("对鸡蛋或牛奶过敏时主方案和替换方案都不会出现对应食材", () => {
+  for (const dietaryRestrictions of ["对鸡蛋过敏", "对牛奶过敏"]) {
+    const plan = generateWeekPlan({ ...homeProfile, dietaryRestrictions }, week);
+    const mealText = mealsOf(plan).map((meal) => [meal.title, ...meal.ingredients, ...meal.alternatives].join(" ")).join(" ");
+
+    if (dietaryRestrictions === "对鸡蛋过敏") {
+      assert.equal(mealText.includes("鸡蛋"), false);
+      assert.equal(mealText.includes("茶叶蛋"), false);
+    } else {
+      assert.equal(mealText.includes("牛奶"), false);
+    }
+  }
+});
+
+test("通常不吃早餐时不会生成固定早餐", () => {
+  const plan = generateWeekPlan({ ...homeProfile, breakfastPattern: "通常不吃" }, week);
+
+  assert.ok(plan.days.every((day) => day.meals.every((meal) => meal.kind !== "breakfast")));
+});
+
+test("有时来不及时早餐优先选择快速且无需烹饪的方案", () => {
+  const plan = generateWeekPlan({ ...homeProfile, breakfastPattern: "有时来不及" }, week);
+  const breakfastMeals = plan.days.flatMap((day) => day.meals.filter((meal) => meal.kind === "breakfast"));
+
+  assert.ok(breakfastMeals.length > 0);
+  assert.ok(breakfastMeals.every((meal) => meal.prepMinutes <= 5 && meal.kitchenCapabilities.length === 0));
+});
+
+test("自己带饭画像会改变工作日午餐并保留可采购食材", () => {
+  const packedProfile = {
+    ...homeProfile,
+    mealScenes: ["自己带饭"],
+    outsideMealRatio: "每周约 1–3 顿",
+  };
+  const outsideProfile = {
+    ...packedProfile,
+    mealScenes: ["公司食堂", "外卖"],
+    outsideMealRatio: "大多数在外面吃",
+  };
+  const packedPlan = generateWeekPlan(packedProfile, week);
+  const outsidePlan = generateWeekPlan(outsideProfile, week);
+  const packedLunches = packedPlan.days.slice(0, 5).flatMap((day) => day.meals.filter((meal) => meal.kind === "lunch"));
+  const outsideLunches = outsidePlan.days.slice(0, 5).flatMap((day) => day.meals.filter((meal) => meal.kind === "lunch"));
+  const shoppingNames = new Set(deriveShoppingList(packedPlan).map((item) => item.name));
+  const packedShoppingItems = new Set(packedLunches.flatMap((meal) => meal.shoppingItems));
+
+  assert.ok(packedLunches.length > 0);
+  assert.ok(packedLunches.every((meal) => meal.scene.includes("自己带饭")));
+  assert.ok(packedLunches.every((meal) => meal.shoppingItems.length > 0));
+  assert.ok([...packedShoppingItems].every((item) => shoppingNames.has(item)));
+  assert.notDeepEqual(packedLunches.map((meal) => meal.id), outsideLunches.map((meal) => meal.id));
 });
 
 test("每天时间差不多时周末继续遵守工作日准备时间上限", () => {
