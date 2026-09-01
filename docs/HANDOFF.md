@@ -6,8 +6,8 @@
 - 当前阶段：饮食管理 MVP 原型，Next.js + TypeScript，移动端优先。
 - 当前开发分支：`hermes/round-03`；禁止直接修改 `main`。
 - 当前 PR：[#3 feat: connect local personalized meal planning](https://github.com/Felix8686/ai-diet-partner/pull/3)，目标 `main`，OPEN，未合并。
-- ChatGPT 本次复验前 PR head：`88d38e63c8f0c95026ecb265dafebd19ca8844eb`。
-- GitHub Actions CI：该 head 已通过。
+- 本轮代码提交：`a732825cad82792da9b5c962a04593b8d1fbc12b`；已推送到 `hermes/round-03`。
+- GitHub Actions CI：本轮代码提交已触发 CI，当前 pending。
 - Round 03 已实现本地确定性餐食规划、统一 localStorage 数据层、周方案持久化、采购清单派生与勾选持久化、每日反馈读取/保存。
 - 当前仍不接 Supabase、认证、真实 AI Provider 或第三方服务。
 
@@ -34,14 +34,17 @@
 - 采购清单使用 `shoppingItems` 区分用户需要购买的东西与食堂/外卖/外食提供的原料；便利店成品保留。
 - 晚间反馈入口已与晚餐是否存在解耦。
 - `weekdayWeekendDifference` 已真正参与周末过滤与排序。
+- 规范化“对 X 过敏”输入，并让“对鸡蛋过敏”同时过滤鸡蛋和茶叶蛋等蛋类模板；主方案与替换方案共用该过滤。
+- `breakfastPattern` 已参与规划：通常不吃时不生成早餐，有时来不及时优先选择 5 分钟内且无需烹饪的早餐。
+- 增加“自己带饭 / 家里”午餐模板与场景偏好；工作日午餐明确显示自带饭，食材进入最终采购清单。
 
 ## 当前验证结果
 
 - `npm run lint`：通过。
-- `npm test`：29 项通过。
+- `npm test`：33 项通过。
 - `npm run build`：通过。
-- GitHub Actions：PR head `88d38e6` 的 CI 成功。
-- Hermes 已完成本地浏览器 smoke：建档 → 周方案 → 首页 → 采购 → 刷新持久化 → 每日反馈，并覆盖此前两轮复验指出的异常状态。
+- GitHub Actions：PR head `a732825` 的 CI 当前 pending，等待远端结果。
+- Hermes 已完成本地浏览器 smoke：通过真实三步建档填写“对鸡蛋过敏、通常不吃、自己带饭”，确认 7 天不生成早餐、工作日午餐显示自己带饭、主方案与替换方案无蛋类，且自带饭食材进入最终采购清单。
 
 ## 前两次 ChatGPT 复验问题
 
@@ -54,9 +57,9 @@
 5. 无晚餐时晚间反馈入口消失。
 6. `weekdayWeekendDifference` 未参与规划、周末无条件放宽。
 
-## ChatGPT 第三次复验：仍有 3 项合并前问题
+## ChatGPT 第三次复验：3 项合并前问题已修正
 
-PR #3 目前仍不要合并 `main`。本轮只修以下问题，不进入 Round 04，不接任何外部服务。
+PR #3 目前仍不要合并 `main`。以下三项问题已在本轮修正并补充回归测试；不进入 Round 04，不接任何外部服务，等待 ChatGPT 再次复验。
 
 ### 1. 用户按界面示例填写“对 X 过敏”时，禁忌过滤可能失效
 
@@ -145,7 +148,7 @@ Round 03 使用最简单规则修正即可：
 
 ## 下一阶段任务
 
-当前不要进入 Round 04。只完成上面的 **ChatGPT 第三次复验 3 项合并前修正**。
+当前不要进入 Round 04。**ChatGPT 第三次复验的 3 项合并前修正已完成**，等待 ChatGPT 再次复验。
 
 ## 执行历史
 
@@ -155,3 +158,5 @@ Round 03 使用最简单规则修正即可：
 - 2026-09-01：ChatGPT 第一次复验发现部分餐别空白、替换方案约束、纯素识别问题；Hermes 修正。
 - 2026-09-01：ChatGPT 第二次复验发现外食采购语义、无晚餐反馈入口、周末差异字段问题；Hermes 修正，29 项测试和 CI 通过。
 - 2026-09-01：ChatGPT 第三次复验确认上述问题已解决，但发现“对 X 过敏”自然输入、早餐习惯未参与规划、“自己带饭”选项无实际效果；PR #3 继续暂缓合并。
+- 2026-09-01：Hermes 在 `hermes/round-03` 提交 `a732825` 修正第三次复验的 3 项问题：规范化“对 X 过敏”并扩展蛋类过滤、让 `breakfastPattern` 参与餐别与快速早餐排序、增加“自己带饭 / 家里”午餐模板和采购语义；33 项测试、lint、build 通过。
+- 2026-09-01：真实三步建档浏览器 smoke 通过，验证上述三项用户路径和最终 localStorage 采购清单；代码已确认存在 GitHub PR #3，等待 ChatGPT 再次复验。
