@@ -8,7 +8,7 @@
 - 当前开发分支：`hermes/round-04`；禁止直接修改 `main`。
 - 当前 PR：#4 `feat: adapt next week plans from feedback`，目标 `main`，OPEN，未合并。
 - Hermes Round 04 提交已实现：按周保存方案/采购清单、反馈聚合、反馈调整接入 planner、本周/下周查看与独立采购。
-- Hermes 已完成本轮两项合并前修正；本地 `npm run lint`、51 项测试、`npm run build`、最终浏览器 smoke 均通过；当前代码提交为 `7114e2dd48d5935d2656dbee914dea15157b3674`，GitHub Actions CI 等待运行。
+- Hermes 已完成本轮两项合并前修正；本地 `npm run lint`、51 项测试、`npm run build`、最终浏览器 smoke 均通过；当前代码提交为 `7114e2dd48d5935d2656dbee914dea15157b3674`，GitHub Actions CI `build` 已通过。
 
 ## 当前产品边界
 
@@ -114,7 +114,7 @@ Round 04 主体方向正确，CI 通过，但 **PR #4 暂不合并**。目前发
 - 本轮代码提交：`7114e2dd48d5935d2656dbee914dea15157b3674`。
 - 本地验证：`npm run lint` 通过；`npm test` 通过（51/51）；`npm run build` 通过。
 - 浏览器 smoke：`round04-final-browser-smoke=PASS`；覆盖本周真实“今天”、下周一不标记“今天”、先生成后更新、最新反馈生效、下周已买项保留、本周方案与采购状态未覆盖。
-- PR #4 当前代码 head：`7114e2dd48d5935d2656dbee914dea15157b3674`；GitHub Actions 等待运行。
+- PR #4 业务代码 head：`7114e2dd48d5935d2656dbee914dea15157b3674`；交接文档提交：`9c1aef92ddc1627577081f5bf899aa7b9f392001`；GitHub Actions `build` 已通过（run [33519712776](https://github.com/Felix8686/ai-diet-partner/actions/runs/33519712776)）。
 
 ## 下一阶段任务
 
