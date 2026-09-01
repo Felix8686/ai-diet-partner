@@ -1,12 +1,13 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "@/components/bottom-nav";
 import type { FeedbackDraft } from "@/types";
 import { getFeedbackValidationMessage, feedbackCanSubmit } from "@/lib/feedback-validation";
 import { getLocalDateKey } from "@/lib/local-calendar";
+import { loadDailyFeedback, saveDailyFeedback } from "@/lib/storage";
 
 const executionOptions: Array<{ value: FeedbackDraft["executionStatus"]; label: string }> = [
   { value: "completed", label: "完成" },
@@ -34,6 +35,14 @@ export default function FeedbackPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const savedFeedback = loadDailyFeedback(getLocalDateKey());
+    if (savedFeedback) {
+      setDraft(savedFeedback);
+      setSubmitted(true);
+    }
+  }, []);
+
   function toggleReason(reason: string) {
     setDraft((current) => {
       const reasons = current.deviationReasons.includes(reason)
@@ -53,7 +62,7 @@ export default function FeedbackPage() {
     }
 
     const date = getLocalDateKey();
-    window.localStorage.setItem(`ai-diet-feedback-${date}`, JSON.stringify({ ...draft, submittedAt: Date.now() }));
+    saveDailyFeedback(date, draft);
     setError("");
     setSubmitted(true);
   }
