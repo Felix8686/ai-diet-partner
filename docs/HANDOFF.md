@@ -10,7 +10,7 @@
 - Round 04 开发分支：`hermes/round-04`。
 - Round 04 PR：#4 `feat: adapt next week plans from feedback`，目标 `main`，OPEN，未合并。
 - Round 04 本轮代码提交：`6cf76f388de672047a5d5a50277f00581dd4628c`，已真实推送到 GitHub。
-- PR #4 GitHub Actions：本轮代码提交 CI 当前 pending，交接文档提交后将由最新 head 重新运行。
+- PR #4 GitHub Actions：截至交接，`build` 已通过；后续提交由 GitHub 自动重跑。
 - 当前已经形成：三步建档 → 本地个性化周方案 → 采购清单 → 每日反馈 → 下一周确定性调整 的可运行闭环。
 - 当前仍不接 Supabase、认证、真实 AI Provider 或第三方服务。
 
