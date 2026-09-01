@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "./bottom-nav";
 import type { GeneratedWeekPlan, MealKind, MealPlanItem } from "@/types";
-import { getHomePeriod, type HomePeriod } from "@/lib/home-view";
+import { getHomeMeals, getHomePeriod, type HomePeriod } from "@/lib/home-view";
 import { getLocalTodayIndex, getLocalWeekStartKey } from "@/lib/local-calendar";
 import { loadWeeklyPlan } from "@/lib/storage";
 
@@ -27,10 +27,6 @@ function greeting(hour: number) {
   return "晚上好";
 }
 
-function findMeal(meals: MealPlanItem[], kind: MealKind) {
-  return meals.find((meal) => meal.kind === kind);
-}
-
 function MealCard({ meal, focus = false }: { meal: MealPlanItem; focus?: boolean }) {
   return (
     <article className={focus ? "mealCard focusMeal" : "mealCard compactCard"}>
@@ -44,12 +40,13 @@ function MealCard({ meal, focus = false }: { meal: MealPlanItem; focus?: boolean
         <span>准备 {meal.prepMinutes} 分钟</span>
       </div>
       {meal.note && <p>{meal.note}</p>}
-      <details>
-        <summary>换一种</summary>
-        <p>{meal.alternatives[0]}</p>
-      </details>
+      {meal.alternatives[0] && <details><summary>换一种</summary><p>{meal.alternatives[0]}</p></details>}
     </article>
   );
+}
+
+function MissingMeal({ kind }: { kind: MealKind }) {
+  return <p className="mealUnavailable">{mealLabels[kind]}暂时没有合适模板，先看其他餐别。</p>;
 }
 
 export function HomeScreen() {
@@ -82,9 +79,7 @@ export function HomeScreen() {
   const hour = now.getHours();
   const period = getHomePeriod(hour);
   const meals = plan.days[getLocalTodayIndex(now)]?.meals ?? [];
-  const breakfast = findMeal(meals, "breakfast");
-  const lunch = findMeal(meals, "lunch");
-  const dinner = findMeal(meals, "dinner");
+  const { breakfast, lunch, dinner } = getHomeMeals(meals);
 
   return (
     <main className="appShell withNav">
@@ -110,34 +105,25 @@ export function HomeScreen() {
         {plan.rulesCannotSatisfy && <p className="planNotice">有些现实条件暂时无法同时满足，已保留当前能执行的选择；调整资料后可以重新生成。</p>}
         {!breakfast && !lunch && !dinner && <p className="emptyState">今天暂时没有符合当前条件的餐食模板，回到资料里调整后再生成一次。</p>}
 
-        {period === "morning" && breakfast && lunch && dinner && (
+        {period === "morning" && (
           <>
-            <MealCard meal={breakfast} focus />
-            <MealCard meal={lunch} />
-            <article className="previewRow">
-              <div><strong>晚餐预览</strong><span>{dinner.scene}</span></div>
-              <p>{dinner.title} · 准备 {dinner.prepMinutes} 分钟</p>
-            </article>
+            {breakfast ? <MealCard meal={breakfast} focus /> : <MissingMeal kind="breakfast" />}
+            {lunch ? <MealCard meal={lunch} /> : <MissingMeal kind="lunch" />}
+            {dinner ? <article className="previewRow"><div><strong>晚餐预览</strong><span>{dinner.scene}</span></div><p>{dinner.title} · 准备 {dinner.prepMinutes} 分钟</p></article> : <MissingMeal kind="dinner" />}
           </>
         )}
 
-        {period === "noon" && lunch && dinner && (
+        {period === "noon" && (
           <>
-            <MealCard meal={lunch} focus />
+            {lunch ? <MealCard meal={lunch} focus /> : <MissingMeal kind="lunch" />}
             <div className="subsectionLabel">晚餐安排</div>
-            <MealCard meal={dinner} />
+            {dinner ? <MealCard meal={dinner} /> : <MissingMeal kind="dinner" />}
           </>
         )}
 
-        {period === "evening" && dinner && (
+        {period === "evening" && (
           <>
-            <MealCard meal={dinner} focus />
-            <section className="feedbackPrompt">
-              <div className="sectionHeading compact">
-                <div><h2>今天吃得怎么样？</h2><p>约 30 秒，告诉我哪里不方便。</p></div>
-              </div>
-              <Link href="/feedback" className="primaryButton">记录今天的情况</Link>
-            </section>
+            {dinner ? <><MealCard meal={dinner} focus /><section className="feedbackPrompt"><div className="sectionHeading compact"><div><h2>今天吃得怎么样？</h2><p>约 30 秒，告诉我哪里不方便。</p></div></div><Link href="/feedback" className="primaryButton">记录今天的情况</Link></section></> : <MissingMeal kind="dinner" />}
           </>
         )}
       </section>

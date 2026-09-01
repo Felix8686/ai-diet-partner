@@ -111,6 +111,7 @@ fieldset > label { display: block; margin-top: 10px; }
 .statusTab strong { margin-left: 4px; }
 .statusTab.active { background: #fff; color: var(--green-dark); box-shadow: 0 2px 8px rgba(33, 51, 31, .08); }
 .emptyState { color: var(--muted); text-align: center; padding: 28px 0; }
+.mealUnavailable { margin: 0 0 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-soft); color: var(--muted); font-size: 13px; line-height: 1.5; }
 .shoppingGroup { margin-bottom: 24px; }
 .shoppingGroup h2 { font-size: 15px; margin: 0 0 8px; color: var(--muted); }
 .shoppingRow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 13px 4px; border-bottom: 1px solid var(--line); font-size: 14px; }

@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 import type { OnboardingProfile } from "@/types";
+import { mealTemplates } from "./meal-templates";
 import { generateWeekPlan } from "./meal-planner";
 
 const busyProfile: OnboardingProfile = {
@@ -103,4 +104,46 @@ test("缺少厨房能力时不会选中依赖该能力的模板", () => {
   }, week);
 
   assert.ok(mealsOf(plan).every((meal) => meal.kitchenCapabilities.every((capability) => capability === "微波")));
+});
+
+test("严格禁忌画像的主方案和替换方案都不会出现动物性食材", () => {
+  const plan = generateWeekPlan({
+    ...homeProfile,
+    dietaryRestrictions: "纯素",
+  }, week);
+  const animalTerms = ["鸡肉", "鸡胸", "牛肉", "鱼", "虾", "虾仁", "鸡蛋", "茶叶蛋", "牛奶", "酸奶", "奶酪"];
+
+  for (const meal of mealsOf(plan)) {
+    const mealText = [meal.title, ...meal.ingredients, ...meal.alternatives].join(" ");
+    assert.equal(meal.dietaryTags.includes("contains-animal"), false);
+    assert.equal(animalTerms.some((term) => mealText.includes(term)), false, `${meal.title} 包含动物性食材`);
+  }
+});
+
+test("替换方案也遵守工作日时间和厨房能力", () => {
+  const plan = generateWeekPlan(busyProfile, week);
+  const templatesByTitle = new Map(mealTemplates.map((template) => [template.title, template]));
+
+  for (const day of plan.days.slice(0, 5)) {
+    for (const meal of day.meals) {
+      for (const alternative of meal.alternatives) {
+        const template = templatesByTitle.get(alternative);
+        assert.ok(template, `找不到替换模板：${alternative}`);
+        assert.ok(template.prepMinutes <= 10);
+        assert.ok(template.kitchenCapabilities.every((capability) => busyProfile.kitchenCapabilities.includes(capability)));
+      }
+    }
+  }
+});
+
+test("替换方案也不会出现用户讨厌或禁忌食物", () => {
+  const plan = generateWeekPlan({
+    ...homeProfile,
+    dislikedFoods: "豆腐",
+    dietaryRestrictions: "花生过敏",
+  }, week);
+  const mealText = mealsOf(plan).map((meal) => [meal.title, ...meal.ingredients, ...meal.alternatives].join(" ")).join(" ");
+
+  assert.equal(mealText.includes("豆腐"), false);
+  assert.equal(mealText.includes("花生"), false);
 });

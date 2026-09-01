@@ -44,6 +44,7 @@ function isMeal(value: unknown): value is MealPlanItem {
     && typeof value.estimatedCost === "number"
     && Array.isArray(value.ingredients)
     && Array.isArray(value.tags)
+    && (value.dietaryTags === undefined || Array.isArray(value.dietaryTags))
     && Array.isArray(value.alternatives);
 }
 
@@ -80,6 +81,18 @@ function isFeedback(value: unknown): value is Omit<StoredFeedback, "date" | "sub
     && (value.submittedAt === undefined || typeof value.submittedAt === "number");
 }
 
+function normalizeWeeklyPlan(plan: GeneratedWeekPlan): GeneratedWeekPlan {
+  return {
+    ...plan,
+    days: plan.days.map((day) => ({
+      ...day,
+      meals: day.meals.map((meal) => Array.isArray(meal.dietaryTags)
+        ? meal
+        : { ...meal, dietaryTags: [], alternatives: [] }),
+    })),
+  };
+}
+
 function readJson(key: string): unknown {
   if (typeof window === "undefined") return null;
   try {
@@ -111,7 +124,8 @@ export function saveProfile(profile: OnboardingProfile): void {
 export function loadWeeklyPlan(weekStart?: string): GeneratedWeekPlan | null {
   const value = readJson(STORAGE_KEYS.weeklyPlan);
   if (!isWeeklyPlan(value)) return null;
-  return weekStart && value.weekStart !== weekStart ? null : value;
+  const normalized = normalizeWeeklyPlan(value);
+  return weekStart && normalized.weekStart !== weekStart ? null : normalized;
 }
 
 export function saveWeeklyPlan(plan: GeneratedWeekPlan): void {

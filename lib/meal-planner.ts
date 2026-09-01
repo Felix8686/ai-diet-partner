@@ -21,7 +21,7 @@ const kindLabels: Record<MealKind, string> = {
 const mealKinds: MealKind[] = ["breakfast", "lunch", "dinner"];
 const outsideScenes = new Set(["公司食堂", "外卖", "便利店", "外食"]);
 const meatTerms = ["鸡肉", "鸡胸", "牛肉", "鱼", "虾", "虾仁"];
-const veganTerms = [...meatTerms, "鸡蛋", "牛奶", "酸奶", "奶酪"];
+const veganTerms = [...meatTerms, "蛋", "牛奶", "酸奶", "奶酪"];
 
 function hash(value: string): number {
   let result = 2166136261;
@@ -75,7 +75,8 @@ function isForbidden(template: MealTemplate, profile: OnboardingProfile): boolea
   const restrictionTerms = terms(profile.dietaryRestrictions).filter((term) => !["素食", "纯素", "全素"].includes(term));
 
   if ((restrictions.includes("纯素") || restrictions.includes("全素"))
-    && template.ingredients.some((ingredient) => veganTerms.some((term) => ingredient.includes(term)))) return true;
+    && (template.dietaryTags.includes("contains-animal")
+      || template.ingredients.some((ingredient) => veganTerms.some((term) => ingredient.includes(term))))) return true;
   if (restrictions.includes("素食")
     && template.ingredients.some((ingredient) => meatTerms.some((term) => ingredient.includes(term)))) return true;
 
@@ -127,6 +128,17 @@ function rankCandidates(
     const rightTie = hash(`${weekStart}|${dayIndex}|${kind}|${right.id}`);
     return leftTie - rightTie || left.id.localeCompare(right.id);
   });
+}
+
+function safeAlternativeTitles(selection: PlanSelection, profile: OnboardingProfile, weekStart: string): string[] {
+  return rankCandidates(
+    selection.candidates.filter((candidate) => candidate.id !== selection.meal.id),
+    profile,
+    selection.dayIndex,
+    selection.kind,
+    weekStart,
+    new Map(),
+  ).slice(0, 1).map((candidate) => candidate.title);
 }
 
 function snackDays(profile: OnboardingProfile): number[] {
@@ -209,7 +221,10 @@ export function generateWeekPlan(profile: OnboardingProfile, week: PlanWeekInput
   const days = dates.map((date, dayIndex) => ({
     day: dayNames[dayIndex],
     date: getLocalDateKey(date),
-    meals: selections.filter((selection) => selection.dayIndex === dayIndex).map((selection) => selection.meal),
+    meals: selections.filter((selection) => selection.dayIndex === dayIndex).map((selection) => ({
+      ...selection.meal,
+      alternatives: safeAlternativeTitles(selection, profile, weekStart),
+    })),
   }));
   const rulesCannotSatisfy = warnings.length > 0;
 

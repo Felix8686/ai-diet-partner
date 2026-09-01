@@ -112,3 +112,18 @@ test("统一存储层保存并读取 profile、方案、采购和反馈", () => 
     assert.equal(storage.getItem(STORAGE_KEYS.feedback("2026-09-01")) !== null, true);
   });
 });
+
+test("旧版周方案仍可读取，但无法验证安全性的替换方案会隐藏", () => {
+  withStorage((storage) => {
+    const plan = generateWeekPlan(profile, "2026-09-07");
+    const legacyPlan = JSON.parse(JSON.stringify(plan));
+    delete legacyPlan.days[0].meals[0].dietaryTags;
+    legacyPlan.days[0].meals[0].alternatives = ["未验证的替换方案"];
+    storage.setItem(STORAGE_KEYS.weeklyPlan, JSON.stringify(legacyPlan));
+
+    const loaded = loadWeeklyPlan();
+    assert.ok(loaded);
+    assert.deepEqual(loaded.days[0].meals[0].dietaryTags, []);
+    assert.deepEqual(loaded.days[0].meals[0].alternatives, []);
+  });
+});

@@ -65,7 +65,7 @@ export default function WeekPage() {
               <h3>{meal.title}</h3>
               <div className="mealMeta"><span>{meal.scene}</span><span>准备 {meal.prepMinutes} 分钟</span></div>
               {meal.note && <p>{meal.note}</p>}
-              <div className="replacement"><span>替换方案</span><p>{meal.alternatives[0]}</p></div>
+              {meal.alternatives[0] && <div className="replacement"><span>替换方案</span><p>{meal.alternatives[0]}</p></div>}
             </article>
           ))}
         </div>

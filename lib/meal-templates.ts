@@ -14,6 +14,7 @@ function template(
   note?: string,
   timeHint?: string,
 ): MealTemplate {
+  const containsAnimalProducts = ingredients.some((ingredient) => /鸡肉|鸡胸|牛肉|鱼|虾|蛋|牛奶|酸奶|奶酪/.test(ingredient));
   const result: MealTemplate = {
     id,
     kind,
@@ -24,6 +25,7 @@ function template(
     estimatedCost,
     ingredients,
     tags,
+    dietaryTags: containsAnimalProducts ? ["contains-animal"] : ["plant-based"],
     alternatives: [alternative],
   };
   if (note) result.note = note;

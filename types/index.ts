@@ -11,6 +11,7 @@ export type MealTemplate = {
   estimatedCost: number;
   ingredients: string[];
   tags: string[];
+  dietaryTags: string[];
   note?: string;
   alternatives: string[];
 };

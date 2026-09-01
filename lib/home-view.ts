@@ -1,6 +1,12 @@
-import type { MealKind } from "@/types";
+import type { MealKind, MealPlanItem } from "@/types";
 
 export type HomePeriod = "morning" | "noon" | "evening";
+
+export type HomeMeals = {
+  breakfast?: MealPlanItem;
+  lunch?: MealPlanItem;
+  dinner?: MealPlanItem;
+};
 
 export function getHomePeriod(hour: number): HomePeriod {
   const normalizedHour = ((hour % 24) + 24) % 24;
@@ -14,4 +20,12 @@ export function getHomeMealKinds(period: HomePeriod): MealKind[] {
   if (period === "morning") return ["breakfast", "lunch", "dinner"];
   if (period === "noon") return ["lunch", "dinner"];
   return ["dinner"];
+}
+
+export function getHomeMeals(meals: MealPlanItem[]): HomeMeals {
+  return {
+    breakfast: meals.find((meal) => meal.kind === "breakfast"),
+    lunch: meals.find((meal) => meal.kind === "lunch"),
+    dinner: meals.find((meal) => meal.kind === "dinner"),
+  };
 }
