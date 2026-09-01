@@ -4,8 +4,9 @@
 
 ## 试用信息
 
-- 试用版本：Round 05
-- 部署地址：待云端部署后填写
+- 试用版本：Round 05（静态部署提交 `a08fc7d`）
+- 部署方式：Cloudflare Pages 静态导出
+- 部署地址：https://ai-diet-partner.pages.dev
 - 开始日期：__________
 - 结束日期：__________
 
