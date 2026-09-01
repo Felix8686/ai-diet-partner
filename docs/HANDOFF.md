@@ -7,7 +7,7 @@
 - 当前分支：`hermes/round-02`。
 - 当前功能提交：`59e862c`（已推送到 GitHub）。
 - Pull Request：[#2 feat: build diet planning MVP flows](https://github.com/Felix8686/ai-diet-partner/pull/2)，目标分支 `main`，当前 OPEN，未合并。
-- CI：PR 最新提交的 GitHub Actions `build` 正在 pending（提交后已触发）。
+- CI：PR 最新提交的 GitHub Actions `build` 已通过。
 - ChatGPT 验收状态：**本轮验收修正已完成，等待 ChatGPT 填写下一阶段任务；PR 暂不合并。**
 - 当前数据：继续使用 mock data；建档资料与反馈仅保存到浏览器 localStorage，尚未接入真实 AI Provider、Supabase 或第三方服务。
 - 可体验入口：
@@ -62,7 +62,7 @@
 - `npm test`：通过，9 个测试全部通过（首页时段、本地日历、反馈校验）。
 - `npm run build`：通过；Next.js 成功生成 `/`、`/onboarding`、`/week`、`/shopping`、`/feedback`、`/profile` 等静态路由。
 - 本地页面核验：生产服务启动后，干净无头 Chrome/CDP 验证周方案默认真实今天、首页当天餐单、反馈原因拦截、“其他”文本保存、采购状态切换，5 项全部 PASS 且无 Console 异常。
-- GitHub Actions：PR #2 最新 `build` 检查为 pending，未将 pending 误报为通过。
+- GitHub Actions：PR #2 最新 `build` 检查已通过。
 - 页面内容核验：首页、建档、本周方案、采购清单、每日反馈和个人页关键文案均存在；没有引入喝水、步数、久坐、运动打卡、健身训练、卡路里记录或库存管理等偏离 MVP 的功能。
 - GitHub：功能代码提交 `59e862c` 已真实存在远端 `hermes/round-02`，PR #2 head 已核对为该提交；PR #2 指向 `main`、状态 OPEN，未执行合并。
 
@@ -113,4 +113,4 @@
 - 2026-09-01：拉取 `hermes/round-02` 最新提交 `1db9e3a`，先为本地日期/当前周和反馈校验编写失败测试，再实现并通过回归测试。
 - 2026-09-01：完成日期工具、首页/周方案日期接入、反馈本地日期 key、原因校验和“其他”文本保存；修复“其他”输入触发的 React 客户端异常。
 - 2026-09-01：通过 `npm run lint`、`npm test`（9 个测试）、`npm run build` 和干净 Chrome/CDP 页面验收；临时服务与浏览器进程已停止。
-- 2026-09-01：创建修正提交 `59e862c` 并推送；确认远端分支和 PR #2 head 均为该提交，PR 保持 OPEN，未合并 `main`；GitHub Actions `build` 当前 pending。
+- 2026-09-01：创建修正提交 `59e862c` 并推送；确认远端分支和 PR #2 head 均为该提交，PR 保持 OPEN，未合并 `main`；随后 GitHub Actions `build` 通过。
