@@ -8,7 +8,7 @@
 - 当前开发分支：`hermes/round-04`；禁止直接修改 `main`。
 - 当前 PR：#4 `feat: adapt next week plans from feedback`，目标 `main`，OPEN，未合并。
 - Hermes Round 04 提交已实现：按周保存方案/采购清单、反馈聚合、反馈调整接入 planner、本周/下周查看与独立采购。
-- Hermes 报告本地 `npm run lint`、47 项测试、`npm run build`、浏览器 smoke 均通过；ChatGPT 复验时 PR 代码 head `f0ed20f2715f16d75609c1d0cbc39c7d8e6379f7` 的 GitHub Actions CI 已通过。
+- Hermes 已完成本轮两项合并前修正；本地 `npm run lint`、51 项测试、`npm run build`、最终浏览器 smoke 均通过；当前代码提交为 `7114e2dd48d5935d2656dbee914dea15157b3674`，GitHub Actions CI 等待运行。
 
 ## 当前产品边界
 
@@ -103,17 +103,23 @@ Round 04 主体方向正确，CI 通过，但 **PR #4 暂不合并**。目前发
   - 切回本周确认方案和采购勾选未被覆盖；
   - 检查下周仍存在采购项的已买状态得到保留。
 
+## Round 04 合并前修正已完成
+
+- 修正 `/week` 的“今天”标识：只有真实本地日期所在的本周日期显示“今天”，下周所有日期只显示真实日期。
+- 增加 `isTodayInWeekView()` 纯逻辑与回归测试，覆盖本周真实今天和下周第一天。
+- 增加统一的 `refreshNextWeekPlan()` 流程：每次生成/更新都重新读取本周全部反馈，并复用现有 planner。
+- 下周方案已存在时提供“根据最新反馈更新”入口；无有效调整时不生成虚假调整说明。
+- 更新下周采购清单时按食材名称保留仍存在项目的已买状态，移除消失项目，新项目默认为未买；本周方案与采购状态继续按 `weekStart` 隔离。
+- 自动回归测试覆盖：先生成再追加反馈、反馈进入新调整、两周状态不互相覆盖、采购状态保留/新增项目默认未买、重复更新稳定。
+- 本轮代码提交：`7114e2dd48d5935d2656dbee914dea15157b3674`。
+- 本地验证：`npm run lint` 通过；`npm test` 通过（51/51）；`npm run build` 通过。
+- 浏览器 smoke：`round04-final-browser-smoke=PASS`；覆盖本周真实“今天”、下周一不标记“今天”、先生成后更新、最新反馈生效、下周已买项保留、本周方案与采购状态未覆盖。
+- PR #4 当前代码 head：`7114e2dd48d5935d2656dbee914dea15157b3674`；GitHub Actions 等待运行。
+
 ## 下一阶段任务
 
-继续使用 `hermes/round-04`，只完成上面 **2 项 Round 04 合并前修正**。
-
-完成后：
-
-1. commit + push 到 `hermes/round-04`。
-2. 更新 PR #4。
-3. 更新本文件，记录修改、测试、smoke 与最新 head。
-4. 不得合并 `main`。
-5. 停止，等待 ChatGPT 再次复验。
+本轮两项 Round 04 合并前修正已完成，等待 ChatGPT 再次复验；下一阶段待 ChatGPT 指定。
+当前不得继续扩大 Round 04 范围，也不得合并 `main`。
 
 ## 后续阶段候选（当前不要做）
 
