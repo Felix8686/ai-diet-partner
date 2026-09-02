@@ -1,4 +1,5 @@
 import type { MealKind, MealTemplate } from "@/types";
+import { defaultRequirementForIngredient } from "@/lib/reality-data";
 
 function template(
   id: string,
@@ -26,7 +27,7 @@ function template(
     kitchenCapabilities,
     estimatedCost,
     ingredients,
-    shoppingItems: isProvidedMeal ? [] : [...ingredients],
+    shoppingItems: isProvidedMeal ? [] : ingredients.map(defaultRequirementForIngredient),
     tags,
     dietaryTags: containsAnimalProducts ? ["contains-animal"] : ["plant-based"],
     alternatives: [alternative],
@@ -67,5 +68,5 @@ export const mealTemplates: MealTemplate[] = [
   template("snack-apple", "snack", "苹果 1 个", "办公室 / 家里", 1, [], 2, ["苹果"], ["加餐", "无烹饪"], "无糖酸奶", "饿的时候再吃。"),
   template("snack-yogurt", "snack", "无糖酸奶", "便利店 / 家里", 1, [], 4, ["无糖酸奶"], ["加餐", "无烹饪"], "香蕉", "买到就能吃。"),
   template("snack-banana", "snack", "香蕉 1 根", "办公室 / 家里", 1, [], 2, ["香蕉"], ["加餐", "无烹饪"], "苹果 1 个", "适合放在办公室。"),
-  template("snack-nuts", "snack", "原味坚果一小把", "便利店 / 家里", 1, [], 5, ["原味坚果"], ["加餐", "无烹饪"], "无糖酸奶", "买小包装更容易控制份量。"),
+  template("snack-nuts", "snack", "原味坚果一小把", "便利店 / 家里", 1, [], 5, ["坚果"], ["加餐", "无烹饪"], "无糖酸奶", "买小包装更容易控制份量。"),
 ];
