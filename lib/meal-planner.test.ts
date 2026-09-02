@@ -214,7 +214,9 @@ test("自己带饭画像会改变工作日午餐并保留可采购食材", () =>
   const packedLunches = packedPlan.days.slice(0, 5).flatMap((day) => day.meals.filter((meal) => meal.kind === "lunch"));
   const outsideLunches = outsidePlan.days.slice(0, 5).flatMap((day) => day.meals.filter((meal) => meal.kind === "lunch"));
   const shoppingNames = new Set(deriveShoppingList(packedPlan).map((item) => item.name));
-  const packedShoppingItems = new Set(packedLunches.flatMap((meal) => meal.shoppingItems));
+  const packedShoppingItems = new Set(
+    packedLunches.flatMap((meal) => meal.shoppingItems.map((item) => typeof item === "string" ? item : item.name)),
+  );
 
   assert.ok(packedLunches.length > 0);
   assert.ok(packedLunches.every((meal) => meal.scene.includes("自己带饭")));
