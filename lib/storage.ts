@@ -149,12 +149,13 @@ function normalizeWeeklyPlan(plan: GeneratedWeekPlan): GeneratedWeekPlan {
               ? []
               : structuredRequirements(meal.ingredients);
       const costSource: CostSource = meal.costSource === "user" ? "user" : "reference";
+      const hasVerifiedDietaryMetadata = Array.isArray(meal.dietaryTags);
       if (costSource === "user") userPricedMeals += 1;
       else referencePricedMeals += 1;
       return {
         ...meal,
-        dietaryTags: Array.isArray(meal.dietaryTags) ? meal.dietaryTags : [],
-        alternatives: Array.isArray(meal.alternatives) ? meal.alternatives : [],
+        dietaryTags: hasVerifiedDietaryMetadata ? meal.dietaryTags : [],
+        alternatives: hasVerifiedDietaryMetadata && Array.isArray(meal.alternatives) ? meal.alternatives : [],
         shoppingItems,
         resolvedCost: typeof meal.resolvedCost === "number" ? meal.resolvedCost : meal.estimatedCost,
         costSource,
