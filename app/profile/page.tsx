@@ -7,8 +7,8 @@ export default function ProfilePage() {
       <header className="pageHeader"><h1>我的</h1></header>
       <section className="settingsList">
         <Link href="/onboarding"><strong>个人资料与生活条件</strong><span>修改 ›</span></Link>
-        <button><strong>我的食材</strong><span>即将接入小票识别 ›</span></button>
-        <button><strong>饮食偏好</strong><span>查看 ›</span></button>
+        <Link href="/food-environment"><strong>我的食材与常见价格</strong><span>录入 / 修改 ›</span></Link>
+        <Link href="/onboarding"><strong>饮食偏好</strong><span>修改 ›</span></Link>
       </section>
       <BottomNav />
     </main>
