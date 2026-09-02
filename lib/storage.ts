@@ -1,8 +1,11 @@
-import type { GeneratedWeekPlan, MealPlanItem, OnboardingProfile, ShoppingItem, StoredFeedback } from "@/types";
+import type { FoodEnvironmentItem, GeneratedWeekPlan, Goal, MealPlanItem, OnboardingProfile, ShoppingItem, StoredFeedback } from "@/types";
 import { getLocalWeekDates, getLocalDateKey, parseLocalDateKey } from "@/lib/local-calendar";
+import { mealTemplates } from "@/lib/meal-templates";
+import { structuredRequirements } from "@/lib/reality-data";
 
 export const STORAGE_KEYS = {
   profile: "ai-diet-profile",
+  foodEnvironment: "ai-diet-food-environment",
   weeklyPlan: "ai-diet-weekly-plan",
   weeklyPlanForWeek: (weekStart: string) => `ai-diet-weekly-plan-${weekStart}`,
   shoppingList: "ai-diet-shopping-list",
@@ -10,30 +13,58 @@ export const STORAGE_KEYS = {
   feedback: (date: string) => `ai-diet-feedback-${date}`,
 };
 
+const goals: Goal[] = ["减脂", "增肌", "保持", "改善健康"];
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isProfile(value: unknown): value is OnboardingProfile {
-  return isRecord(value)
-    && typeof value.age === "string"
-    && typeof value.sex === "string"
-    && typeof value.heightCm === "string"
-    && typeof value.weightKg === "string"
-    && typeof value.goal === "string"
-    && typeof value.weeklyFoodBudget === "string"
-    && typeof value.weekdayCookTime === "string"
-    && typeof value.weekdayWeekendDifference === "string"
-    && typeof value.outsideMealRatio === "string"
-    && Array.isArray(value.mealScenes)
-    && typeof value.likedFoods === "string"
-    && typeof value.dislikedFoods === "string"
-    && typeof value.dietaryRestrictions === "string"
-    && typeof value.breakfastPattern === "string"
-    && typeof value.lateNightSnack === "string"
-    && typeof value.snackHabit === "string"
-    && Array.isArray(value.kitchenCapabilities)
-    && typeof value.shoppingPlace === "string";
+function normalizeProfile(value: unknown): OnboardingProfile | null {
+  if (!isRecord(value)
+    || typeof value.age !== "string"
+    || typeof value.sex !== "string"
+    || typeof value.heightCm !== "string"
+    || typeof value.weightKg !== "string"
+    || typeof value.weeklyFoodBudget !== "string"
+    || typeof value.weekdayCookTime !== "string"
+    || typeof value.weekdayWeekendDifference !== "string"
+    || typeof value.outsideMealRatio !== "string"
+    || !Array.isArray(value.mealScenes)
+    || typeof value.likedFoods !== "string"
+    || typeof value.dislikedFoods !== "string"
+    || typeof value.dietaryRestrictions !== "string"
+    || typeof value.breakfastPattern !== "string"
+    || typeof value.lateNightSnack !== "string"
+    || typeof value.snackHabit !== "string"
+    || !Array.isArray(value.kitchenCapabilities)
+    || typeof value.shoppingPlace !== "string") return null;
+
+  const migratedGoals = Array.isArray(value.goals)
+    ? value.goals.filter((goal): goal is Goal => typeof goal === "string" && goals.includes(goal as Goal))
+    : typeof value.goal === "string" && goals.includes(value.goal as Goal)
+      ? [value.goal as Goal]
+      : [];
+
+  return {
+    age: value.age,
+    sex: value.sex,
+    heightCm: value.heightCm,
+    weightKg: value.weightKg,
+    goals: migratedGoals.length > 0 ? migratedGoals : ["减脂"],
+    weeklyFoodBudget: value.weeklyFoodBudget,
+    weekdayCookTime: value.weekdayCookTime,
+    weekdayWeekendDifference: value.weekdayWeekendDifference,
+    outsideMealRatio: value.outsideMealRatio,
+    mealScenes: value.mealScenes.filter((item): item is string => typeof item === "string"),
+    likedFoods: value.likedFoods,
+    dislikedFoods: value.dislikedFoods,
+    dietaryRestrictions: value.dietaryRestrictions,
+    breakfastPattern: value.breakfastPattern,
+    lateNightSnack: value.lateNightSnack,
+    snackHabit: value.snackHabit,
+    kitchenCapabilities: value.kitchenCapabilities.filter((item): item is string => typeof item === "string"),
+    shoppingPlace: value.shoppingPlace,
+  };
 }
 
 function isMeal(value: unknown): value is MealPlanItem {
@@ -72,7 +103,22 @@ function isShoppingItem(value: unknown): value is ShoppingItem {
     && typeof value.name === "string"
     && typeof value.amount === "string"
     && typeof value.purchased === "boolean"
+    && (value.quantity === undefined || typeof value.quantity === "number")
+    && (value.unit === undefined || typeof value.unit === "string")
     && (value.price === undefined || typeof value.price === "number");
+}
+
+function isFoodEnvironmentItem(value: unknown): value is FoodEnvironmentItem {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && (value.kind === "ingredient" || value.kind === "prepared-meal")
+    && typeof value.name === "string"
+    && typeof value.quantity === "number"
+    && typeof value.unit === "string"
+    && typeof value.price === "number"
+    && (value.scene === undefined || typeof value.scene === "string")
+    && (value.place === undefined || typeof value.place === "string")
+    && (value.availability === "稳定能买到" || value.availability === "通常能买到" || value.availability === "不太稳定");
 }
 
 function isFeedback(value: unknown): value is Omit<StoredFeedback, "date" | "submittedAt"> & Partial<Pick<StoredFeedback, "date" | "submittedAt">> {
@@ -86,23 +132,41 @@ function isFeedback(value: unknown): value is Omit<StoredFeedback, "date" | "sub
 }
 
 function normalizeWeeklyPlan(plan: GeneratedWeekPlan): GeneratedWeekPlan {
-  return {
-    ...plan,
-    days: plan.days.map((day) => ({
-      ...day,
-      meals: day.meals.map((meal) => {
-        const shoppingItems = Array.isArray(meal.shoppingItems)
-          ? meal.shoppingItems
+  let userPricedMeals = 0;
+  let referencePricedMeals = 0;
+  const days = plan.days.map((day) => ({
+    ...day,
+    meals: day.meals.map((meal) => {
+      const currentTemplate = mealTemplates.find((template) => template.id === meal.id);
+      const rawShopping = Array.isArray(meal.shoppingItems) ? meal.shoppingItems : undefined;
+      const shoppingItems = rawShopping && rawShopping.length > 0
+        ? structuredRequirements(rawShopping)
+        : currentTemplate?.shoppingItems
+          ? structuredRequirements(currentTemplate.shoppingItems)
           : meal.scene.includes("便利店")
-            ? meal.ingredients
+            ? structuredRequirements(meal.ingredients)
             : ["公司食堂", "外卖", "外食"].some((providedScene) => meal.scene.includes(providedScene))
               ? []
-              : meal.ingredients;
-        return Array.isArray(meal.dietaryTags)
-          ? { ...meal, shoppingItems }
-          : { ...meal, dietaryTags: [], alternatives: [], shoppingItems };
-      }),
-    })),
+              : structuredRequirements(meal.ingredients);
+      const costSource = meal.costSource === "user" ? "user" : "reference";
+      if (costSource === "user") userPricedMeals += 1;
+      else referencePricedMeals += 1;
+      return {
+        ...meal,
+        dietaryTags: Array.isArray(meal.dietaryTags) ? meal.dietaryTags : [],
+        alternatives: Array.isArray(meal.alternatives) ? meal.alternatives : [],
+        shoppingItems,
+        resolvedCost: typeof meal.resolvedCost === "number" ? meal.resolvedCost : meal.estimatedCost,
+        costSource,
+      };
+    }),
+  }));
+  return {
+    ...plan,
+    days,
+    userPricedMeals: typeof plan.userPricedMeals === "number" ? plan.userPricedMeals : userPricedMeals,
+    referencePricedMeals: typeof plan.referencePricedMeals === "number" ? plan.referencePricedMeals : referencePricedMeals,
+    containsReferenceEstimates: typeof plan.containsReferenceEstimates === "boolean" ? plan.containsReferenceEstimates : referencePricedMeals > 0,
   };
 }
 
@@ -126,12 +190,23 @@ function writeJson(key: string, value: unknown): void {
 }
 
 export function loadProfile(): OnboardingProfile | null {
-  const value = readJson(STORAGE_KEYS.profile);
-  return isProfile(value) ? value : null;
+  const normalized = normalizeProfile(readJson(STORAGE_KEYS.profile));
+  if (normalized) writeJson(STORAGE_KEYS.profile, normalized);
+  return normalized;
 }
 
 export function saveProfile(profile: OnboardingProfile): void {
-  writeJson(STORAGE_KEYS.profile, profile);
+  const normalized = normalizeProfile(profile);
+  if (normalized) writeJson(STORAGE_KEYS.profile, normalized);
+}
+
+export function loadFoodEnvironment(): FoodEnvironmentItem[] {
+  const value = readJson(STORAGE_KEYS.foodEnvironment);
+  return Array.isArray(value) ? value.filter(isFoodEnvironmentItem) : [];
+}
+
+export function saveFoodEnvironment(items: FoodEnvironmentItem[]): void {
+  writeJson(STORAGE_KEYS.foodEnvironment, items);
 }
 
 function readWeeklyPlanAtKey(key: string): GeneratedWeekPlan | null {
@@ -148,7 +223,6 @@ export function loadWeeklyPlan(weekStart?: string): GeneratedWeekPlan | null {
     const keyedPlan = readWeeklyPlanAtKey(STORAGE_KEYS.weeklyPlanForWeek(weekStart));
     if (keyedPlan?.weekStart === weekStart) return keyedPlan;
   }
-
   const legacyPlan = readLegacyWeeklyPlan();
   if (!legacyPlan || (weekStart && legacyPlan.weekStart !== weekStart)) return null;
   if (weekStart) writeJson(STORAGE_KEYS.weeklyPlanForWeek(weekStart), legacyPlan);
@@ -163,7 +237,6 @@ export function loadShoppingList(weekStart?: string): ShoppingItem[] {
   if (weekStart) {
     const keyedValue = readJson(STORAGE_KEYS.shoppingListForWeek(weekStart));
     if (Array.isArray(keyedValue) && keyedValue.every(isShoppingItem)) return keyedValue;
-
     const legacyPlan = readLegacyWeeklyPlan();
     const legacyValue = readJson(STORAGE_KEYS.shoppingList);
     if (legacyPlan?.weekStart === weekStart && Array.isArray(legacyValue) && legacyValue.every(isShoppingItem)) {
@@ -172,7 +245,6 @@ export function loadShoppingList(weekStart?: string): ShoppingItem[] {
     }
     return [];
   }
-
   const value = readJson(STORAGE_KEYS.shoppingList);
   return Array.isArray(value) && value.every(isShoppingItem) ? value : [];
 }
