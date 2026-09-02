@@ -54,6 +54,12 @@ test("午餐时段首页直接聚焦午餐，不依赖早上 tab", () => {
   assert.equal(state.label, "下一顿 · 午餐");
 });
 
+test("15 点午餐后首页直接聚焦晚餐", () => {
+  const state = getNextMealState([minimalMeal("breakfast", "b"), minimalMeal("lunch", "l"), minimalMeal("dinner", "d")], 15, "大多数时候会吃");
+  assert.equal(state.nextMeal?.id, "d");
+  assert.equal(state.label, "下一顿 · 晚餐");
+});
+
 test("通常不吃早餐时早上下一顿直接是午餐", () => {
   const state = getNextMealState([minimalMeal("lunch", "l"), minimalMeal("dinner", "d")], 8, "通常不吃");
   assert.equal(state.nextMeal?.id, "l");
