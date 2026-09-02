@@ -3,7 +3,7 @@
 ## 项目当前状态
 
 - 项目：AI Diet Partner。
-- 当前阶段：饮食管理 MVP 已具备首轮真实自用条件。
+- 当前阶段：Round 05 云端试用版已部署，等待 ChatGPT 复验并开始首轮 7 天真实自用。
 - Round 04 / PR #4 已通过 ChatGPT 复验并 squash 合并到 `main`。
 - Round 04 合并提交：`004ab6c6ea46d3dd132be05d2c3564e8cd832d37`。
 - PR #4 最终 head：`5e3145133d316dd092c9d58c55241c7caa481f08`；GitHub Actions CI 已通过。
@@ -24,6 +24,30 @@
 - Hermes 本地验证：51 项测试、lint、build、最终浏览器 smoke 均通过。
 - PR 最终 head 的 GitHub Actions CI 已通过。
 
+## Round 05 完成内容
+
+- 从已合并的最新 `main` 创建 `hermes/round-05`；本轮没有直接修改或提交 GitHub `main`。
+- 采用 Cloudflare 官方静态 Next.js 部署路径：Next.js `output: "export"` + `trailingSlash: true`，使用 Cloudflare Pages，不新增数据库、认证或服务端状态。
+- Cloudflare Pages 项目：`ai-diet-partner`；生产试用地址：<https://ai-diet-partner.pages.dev>。
+- 生产部署记录：部署 ID `09b0aa82-ae2b-4713-b15e-a09cda3df206`，源码提交 `a08fc7d`；同一提交另有 `hermes/round-05` 预览部署 `0fb7e8a5-079f-4f38-90a6-c40f1a319892`。
+- “生产部署 Branch: main”是 Wrangler `--branch main` 的 Pages 环境标记，代码来自本分支已推送的 `a08fc7d`，不代表 GitHub `main` 有本轮提交。
+- 补齐 PWA manifest 的 `id`、`scope`、192/512 PNG 图标、Apple Web App 元数据；未增加 Service Worker 或复杂离线系统。
+- 新增 `docs/TRIAL-01.md`，记录版本、部署地址、开始/结束日期、Day 1–7 真实问题等级和 localStorage 数据丢失提醒。
+
+## Round 05 验证结果
+
+- 本地：`npm install`、`npm run lint`、`npm test`（51/51）、`npm run build` 均通过；静态 `out/` 中的首页、manifest 和两个图标均生成。
+- 公开 URL：生产域的 `/`、`/onboarding/`、`/week/`、`/shopping/`、`/feedback/`、`/profile/`、`/manifest.webmanifest`、`/icon-192.png`、`/icon-512.png` 均真实读取 HTTP 200；Pages 项目和 Production/Preview 部署记录已用 Wrangler 读回。
+- 手机真实 smoke：在独立临时 Chrome profile 以 390×844 视口打开生产域，完成首次打开 → 三步建档 → 本周方案 → 采购勾选并刷新 → 每日反馈保存并刷新 → 生成下周 → 根据反馈更新下周；页面无全局横向溢出，日期栏横向滚动符合设计，固定导航不遮挡滚动到底的内容，runtime errors 为 0。
+- 采购状态和本周/下周方案 key 在真实浏览器 localStorage 中分别保存，刷新后已买状态保持；本次 smoke 生成了本周 `2026-08-31` 和下周 `2026-09-07` 两组数据。
+
+## Round 05 已知限制与运行方式
+
+- 这是公开的静态前端试用版：方案、采购勾选和反馈只保存在当前浏览器 localStorage；清除浏览器数据、无痕模式或更换设备可能丢失全部试用数据。
+- 没有登录、云同步、数据库、真实 AI Provider、Service Worker 离线缓存或行为追踪；同一 URL 不代表不同设备共享数据。
+- Pages 项目未接 Git 自动构建，发布由已登录 Wrangler 手动执行：`npm run build` 后运行 `npm run deploy -- --branch main` 更新生产域；不要把密钥写入仓库。
+- `npm install` 当前报告 2 个依赖审计告警（1 moderate、1 high），本轮未执行可能引入破坏性升级的 `npm audit fix --force`。
+
 ## 当前产品边界
 
 继续严格遵守 `AGENTS.md` 与 `docs/PRODUCT.md`：
@@ -38,99 +62,7 @@
 
 ## 下一阶段任务
 
-### Round 05：云端试用版 + 首轮 7 天真实自用准备
-
-这一轮不继续增加产品功能。目标是把已经可运行的 MVP 变成用户可以直接在手机上连续使用 7 天的云端测试版。
-
-Hermes 开始前必须：
-
-1. 拉取最新 `main`。
-2. 从最新 `main` 新建 `hermes/round-05`。
-3. 禁止直接 commit / push / merge `main`。
-4. 完成后创建 PR 指向 `main`，不得自行合并。
-
-### A. 云端部署优先
-
-- 优先评估并采用 Cloudflare 官方当前推荐的 Next.js 部署路径。
-- 优先 Cloudflare Workers / Pages 等免费或低成本方案；不要为了试用引入付费基础设施。
-- 部署前先核实当前 Next.js 版本和项目配置与所选 Cloudflare 路径兼容，不要凭旧教程硬套。
-- 如果当前项目可以直接以静态方式安全部署，可选择更简单方案；如果需要 Next.js 运行时，则使用 Cloudflare 当前官方支持方式。
-- 不要新增数据库、登录系统或服务端状态。
-- 不要把 localStorage 改成云数据库；首轮 7 天试用明确只在同一浏览器/设备保存数据。
-- 若 Cloudflare 认证/账号权限是唯一阻塞，停止部署并在 HANDOFF 中准确记录缺什么；不得声称已上线。
-
-### B. 试用前稳定性检查
-
-必须用生产构建检查手机使用关键路径：
-
-1. 首次打开 → 三步建档。
-2. 查看本周方案。
-3. 查看并勾选采购清单，刷新后状态保持。
-4. 每日反馈保存与刷新读取正常。
-5. 生成下周方案。
-6. 新增反馈后再次更新下周方案。
-7. 本周 / 下周切换正常。
-8. 本周 / 下周采购状态互不覆盖。
-9. 主页面在“通常不吃早餐”等已知特殊画像下语义正确。
-10. 手机窄屏无明显横向溢出、按钮遮挡、无法点击等阻断问题。
-
-只修会阻碍 7 天真实试用的问题；不要趁机重做 UI。
-
-### C. PWA / 手机入口最小确认
-
-- 检查现有 manifest、viewport、图标和可添加到主屏幕能力。
-- 如果已经满足基本 PWA 安装条件，只做必要修正；不要做复杂离线系统。
-- 不要求完整 Service Worker 离线缓存，除非当前部署方式自然包含且不会增加明显风险。
-- 页面首次打开要能明确进入建档/方案流程，不增加营销落地页。
-
-### D. 建立 7 天自用测试清单
-
-新增 `docs/TRIAL-01.md`，保持简洁，供用户实际每天使用时记录。
-
-至少包含：
-
-- 试用版本/部署地址。
-- 开始日期、结束日期空位。
-- Day 1：建档、方案是否像现实生活。
-- Day 2–6：每天只记录真正影响使用的问题，例如菜单不现实、买不到、太麻烦、反馈入口难找、状态丢失。
-- Day 7：生成/更新下周方案，判断系统是否真正理解前一周失败原因。
-- 问题分三级：阻断 / 明显影响 / 可以后优化。
-- 明确提醒：本轮测试数据只保存在当前浏览器，清浏览器数据或换设备会丢失。
-
-不要增加复杂埋点、分析后台或用户行为追踪。
-
-### E. 本轮禁止
-
-不要加入：
-
-- Supabase / 认证 / 云同步
-- 真实 AI / LLM Provider
-- 地图 / 高德 / 美团
-- MCP / 外部 Agent
-- 小票 OCR / 食材识别
-- 正式营养/份量层
-- 新的泛健康功能
-- 吉祥物
-- 复杂 analytics
-
-### F. 验证与交接
-
-必须执行：
-
-- `npm run lint`
-- `npm test`
-- `npm run build`
-- 云端真实 URL 的手机尺寸 smoke，至少覆盖建档 → 本周 → 采购 → 反馈 → 下周 → 更新下周。
-
-完成后：
-
-1. commit + push 到 `hermes/round-05`。
-2. 创建 PR 指向 `main`。
-3. 更新本文件，写明实际部署方式、公开测试 URL、验证结果、已知限制。
-4. `docs/TRIAL-01.md` 中记录测试 URL。
-5. 将“下一阶段任务”改为等待 ChatGPT 复验。
-6. 不得合并 PR。
-7. 停止工作。
+等待 ChatGPT 复验 Round 05 的 GitHub PR、Cloudflare Pages 公开 URL 和 `docs/TRIAL-01.md`，再决定 7 天真实自用后是否需要产品修正；本分支不继续扩展功能。
 
 ## 后续阶段候选（本轮不要做）
 
