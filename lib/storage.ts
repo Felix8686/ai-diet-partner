@@ -1,4 +1,4 @@
-import type { FoodEnvironmentItem, GeneratedWeekPlan, Goal, MealPlanItem, OnboardingProfile, ShoppingItem, StoredFeedback } from "@/types";
+import type { CostSource, FoodEnvironmentItem, GeneratedWeekPlan, Goal, MealPlanItem, OnboardingProfile, ShoppingItem, StoredFeedback } from "@/types";
 import { getLocalWeekDates, getLocalDateKey, parseLocalDateKey } from "@/lib/local-calendar";
 import { mealTemplates } from "@/lib/meal-templates";
 import { structuredRequirements } from "@/lib/reality-data";
@@ -148,7 +148,7 @@ function normalizeWeeklyPlan(plan: GeneratedWeekPlan): GeneratedWeekPlan {
             : ["公司食堂", "外卖", "外食"].some((providedScene) => meal.scene.includes(providedScene))
               ? []
               : structuredRequirements(meal.ingredients);
-      const costSource = meal.costSource === "user" ? "user" : "reference";
+      const costSource: CostSource = meal.costSource === "user" ? "user" : "reference";
       if (costSource === "user") userPricedMeals += 1;
       else referencePricedMeals += 1;
       return {
