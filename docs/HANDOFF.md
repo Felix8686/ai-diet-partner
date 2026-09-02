@@ -1,74 +1,67 @@
 # 项目交接文档
 
-## 固定协作方式（本轮起严格执行）
+## 固定协作方式
 
 - **ChatGPT 负责产品判断、代码修改、自动测试补充、PR 创建、代码复验与最终合并。**
-- **Hermes 不负责根据 HANDOFF 自主开发产品代码。** Hermes 的职责是拉取 ChatGPT 已完成的分支，在用户真实 Windows / Chrome / Cloudflare 环境执行本地验证、浏览器 smoke、部署 preview，并准确报告结果。
-- Hermes 验证失败时：记录复现步骤、错误、日志和环境信息，然后停止；由 ChatGPT 修改代码。除非 ChatGPT 明确给出某一项“本地环境修复”指令，否则 Hermes 不自行改产品逻辑。
-- 用户只需要反馈实际体验或转告“验收成功/失败”，不再承担两个 Agent 之间的开发指令搬运。
+- **Hermes 不负责自主开发产品代码。** Hermes 负责拉取 ChatGPT 已完成的代码，在用户真实 Windows / Chrome / Cloudflare 环境执行本地验证、浏览器 smoke、Preview / Production 部署，并准确报告结果。
+- Hermes 验证失败时：记录复现步骤、错误、日志和环境信息，然后停止；由 ChatGPT 修改代码。
+- 用户只需要反馈实际体验或转告验收成功/失败。
 - Hermes 永远不得直接 commit / push / merge `main`。
 
 ## 当前状态
 
 - 项目：AI Diet Partner。
-- TRIAL-01 已提前暂停。Day 1 已确认现有版本存在会污染 7 天试用结论的核心问题。
-- 当前分支：`hermes/round-06`。
-- 当前 PR：#6 `feat: restore reality data and trial-blocker fixes`，目标 `main`，不得由 Hermes 合并。
-- Round 06 产品代码由 ChatGPT 直接实现；当前等待 GitHub CI 与后续 Hermes 本地验收。
+- TRIAL-01 已提前暂停并保留为 Round 05 的失败试用记录。
+- Round 06 已完成并通过验收。
+- PR #6 `feat: restore reality data and trial-blocker fixes` 已由 ChatGPT squash merge 到 `main`。
+- Round 06 merge commit：`3b05e6cce821160df800d2f5e650fd520c267725`。
+- exact-head GitHub CI：PASS。
+- Hermes 本地验收：lint PASS；`npm test` 59/59 PASS；build PASS。
+- Cloudflare Preview：`https://hermes-round-06.ai-diet-partner.pages.dev`。
+- 真实浏览器直连验收未发现新的产品阻断；15:00 与晚餐后时段逻辑已由单元测试覆盖。
 
-## Round 06 已实现方向
+## Round 06 已接受内容
 
-1. 建档目标从单选升级为多选，并兼容 Round 05 的旧 `goal` localStorage 数据。
-2. 新增“我的食材与常见价格”手工录入：
-   - 常买食材 / 便利店成品：名称、真实购买数量、单位、购买价格、地点、可得性。
-   - 外食 / 食堂 / 外卖：名称、场景、每份实际价格、可得性。
-3. 预算改为用户价格优先：
-   - 能匹配用户真实数据时使用真实价格。
-   - 无真实数据时继续使用模板价格，但明确标记为“参考估价”。
-   - 外食不再用家庭原料价格冒充整餐价格；可使用同场景用户价格，否则降级为参考估价。
-4. 采购清单改成结构化数量与单位，例如 `鸡蛋 8 个`、`鸡胸肉 600 g`，不再使用“X 份餐食用量”。
-5. 采购项使用稳定标识，继续保留“仍存在则保留已买状态；消失移除；新增未买”的行为，并兼容旧采购数据。
-6. 首页删除“早上/早餐、中午/午餐、晚上/晚餐”混合 tab，改为真实时间驱动的“下一顿”。
-7. 周方案与首页明确显示餐费是“按你的价格”还是“参考估价”。
-8. 当前仍保持 localStorage，不接 Supabase / 登录 / 云同步 / LLM / 地图 / OCR。
+1. 建档目标支持多选，并兼容旧 `goal` localStorage 数据。
+2. 新增“我的食材与常见价格”手工录入。
+3. 预算逻辑改为用户真实价格优先；缺少真实价格时明确标记“参考估价”。
+4. 外食不再用家庭原料价格冒充整餐真实价格。
+5. 采购清单改成结构化真实采购数量与单位，不再使用“X 份餐食用量”。
+6. 食堂 / 外卖商家提供的原料不进入家庭采购清单。
+7. 首页改为真实时间驱动的“下一顿”，去掉时间段与餐别混合 tab。
+8. 旧版周方案迁移时，缺少安全元数据的未验证替换方案会被清空。
+9. 当前仍保持 localStorage，不接 Supabase / 登录 / 云同步 / LLM / 地图 / OCR。
 
-## Hermes 本地验收任务（只验收，不开发）
+## 当前部署任务
 
-在 ChatGPT 明确通知“可以开始本地验收”之后再执行：
+下一步不是 Round 07 开发，而是把已合并的 Round 06 `main` 部署到 Cloudflare Pages 正式环境。
 
-1. 拉取 `hermes/round-06` 最新代码，确认没有切到 `main`。
-2. 执行：
-   - `npm install`
-   - `npm run lint`
-   - `npm test`
-   - `npm run build`
-3. 用独立 Chrome profile 做 390×844 手机尺寸 smoke：
-   - Round 05 旧 localStorage profile（只有单个 `goal`）能正常打开，并迁移为多目标结构。
-   - 建档可选择 1 个或多个目标，0 个目标不能继续。
-   - “我的 → 我的食材与常见价格”可以录入并保存：
-     - 1 个常买食材真实价格；
-     - 1 个外卖/食堂/外食真实价格。
-   - 按最新价格更新本周方案后：匹配到的数据显示“按你的价格”；其余明确显示“参考估价”。
-   - 周预算说明不得暗示系统知道当地真实价格。
-   - 采购页出现真实单位（个 / 根 / 杯 / g / 盒等），不得出现“餐食用量”。
-   - 食堂/外卖原料不得进入家庭采购；便利店成品可以进入。
-   - 首页：
-     - 早餐用户早上能看到早餐；
-     - “通常不吃早餐”用户早上直接看到下一顿午餐；
-     - 午餐时段直接聚焦午餐，不出现“早上/早餐”高亮；
-     - 午餐后聚焦晚餐；
-     - 晚餐后不再把晚餐伪装成下一顿，并保留当天反馈入口。
-   - 本周 / 下周 / 反馈 / 更新下周闭环仍正常。
-4. 若本地 build 和 smoke 全通过，再部署 **Cloudflare Pages preview**，不要覆盖生产 `ai-diet-partner.pages.dev`。
-5. 报告给 ChatGPT：
-   - lint / test / build 结果；
-   - 浏览器 smoke 各项 PASS/FAIL；
-   - preview URL；
-   - 若失败，给出精确复现步骤与日志。
-6. 不修改产品代码，不合并 `main`，完成报告后停止。
+Hermes 只执行部署：
+
+1. 切到 `main`。
+2. `git pull origin main`。
+3. 确认 HEAD 至少包含 Round 06 merge commit `3b05e6cce821160df800d2f5e650fd520c267725` 以及本 HANDOFF 文档更新。
+4. `npm run build`。
+5. 使用已有 Cloudflare Pages 项目 `ai-diet-partner` 部署 **production / main branch**。
+6. 必须确认正式地址仍为 `https://ai-diet-partner.pages.dev`。
+7. 部署后仅做最小线上检查：首页、onboarding、food-environment、week、shopping、feedback 均可正常打开。
+8. 不修改任何产品代码，不创建新功能，不进入 Round 07。
+9. 最终只报告 Production 部署 PASS/FAIL、deployment ID、正式 URL、线上路由检查结果。
+
+## 下一阶段
+
+Production 部署确认后，开启 **TRIAL-02**：重新从 Day 1 开始真实 7 天自用，不沿用 TRIAL-01 的测试数据和结论。
+
+TRIAL-02 期间：
+- 使用同一台手机、同一个浏览器；
+- 使用真实资料、真实常买食材和真实价格；
+- 非阻断问题只记录，不连续改代码；
+- 若出现会污染试用结论的核心阻断，立即暂停并交回 ChatGPT；
+- Day 7 重点判断：系统是否根据一周真实反馈，让下一周方案更符合现实。
 
 ## 当前禁止范围
 
+- Round 07 新功能开发
 - 小票 OCR / 货架识别正式实现
 - Supabase / 登录 / 云同步
 - 真实 AI / LLM Provider
@@ -77,8 +70,3 @@
 - 卡路里流水账 / 正式宏量营养处方
 - 泛健康功能
 - 吉祥物 / 卡通 IP
-
-## 下一步
-
-等待 GitHub CI。CI 通过且 ChatGPT 完成代码复验后，由 ChatGPT 给出一条只包含“拉取 round-06 并执行本地验收”的 Hermes 指令。
-Hermes 本地验收通过后，ChatGPT 再决定是否合并 PR #6 并更新 Cloudflare 正式试用版。
