@@ -33,28 +33,26 @@ export function deriveShoppingList(plan: GeneratedWeekPlan): ShoppingItem[] {
       }
     }
   }
-
   return [...totals.values()]
     .sort((left, right) => {
       const categoryDifference = categoryOrder.indexOf(categoryForIngredient(left.name)) - categoryOrder.indexOf(categoryForIngredient(right.name));
       return categoryDifference || left.name.localeCompare(right.name) || left.unit.localeCompare(right.unit);
     })
     .map(({ name, unit, quantity }) => ({
-      id: stableId(name, unit),
-      category: categoryForIngredient(name),
-      name,
-      quantity,
-      unit,
-      amount: `${formatQuantity(quantity)} ${unit}`,
-      purchased: false,
+      id: stableId(name, unit), category: categoryForIngredient(name), name, quantity, unit,
+      amount: `${formatQuantity(quantity)} ${unit}`, purchased: false,
     }));
 }
 
 export function mergeShoppingListPreservingPurchased(previousItems: ShoppingItem[], nextItems: ShoppingItem[]): ShoppingItem[] {
-  const purchasedIds = new Set(previousItems.filter((item) => item.purchased).map((item) => item.id));
-  const purchasedLegacy = new Set(previousItems.filter((item) => item.purchased).map((item) => `${item.name.trim()}\u0000${item.unit ?? ""}`));
+  const purchased = previousItems.filter((item) => item.purchased);
+  const purchasedIds = new Set(purchased.map((item) => item.id));
+  const purchasedNameUnits = new Set(purchased.filter((item) => item.unit).map((item) => `${item.name.trim()}\u0000${item.unit}`));
+  const legacyPurchasedNames = new Set(purchased.filter((item) => !item.unit).map((item) => item.name.trim()));
   return nextItems.map((item) => ({
     ...item,
-    purchased: purchasedIds.has(item.id) || purchasedLegacy.has(`${item.name.trim()}\u0000${item.unit ?? ""}`),
+    purchased: purchasedIds.has(item.id)
+      || purchasedNameUnits.has(`${item.name.trim()}\u0000${item.unit ?? ""}`)
+      || legacyPurchasedNames.has(item.name.trim()),
   }));
 }
