@@ -1,5 +1,13 @@
 export type MealKind = "breakfast" | "lunch" | "dinner" | "snack";
 
+export type ShoppingRequirement = {
+  name: string;
+  quantity: number;
+  unit: string;
+};
+
+export type CostSource = "user" | "reference";
+
 export type MealTemplate = {
   id: string;
   kind: MealKind;
@@ -10,11 +18,13 @@ export type MealTemplate = {
   kitchenCapabilities: string[];
   estimatedCost: number;
   ingredients: string[];
-  shoppingItems: string[];
+  shoppingItems: Array<ShoppingRequirement | string>;
   tags: string[];
   dietaryTags: string[];
   note?: string;
   alternatives: string[];
+  resolvedCost?: number;
+  costSource?: CostSource;
 };
 
 export type MealPlanItem = MealTemplate;
@@ -35,6 +45,9 @@ export type GeneratedWeekPlan = {
   status: "ready" | "rules-cannot-satisfy";
   warnings: string[];
   adjustmentSummary?: string[];
+  containsReferenceEstimates?: boolean;
+  userPricedMeals?: number;
+  referencePricedMeals?: number;
 };
 
 export type ShoppingItem = {
@@ -42,6 +55,8 @@ export type ShoppingItem = {
   category: string;
   name: string;
   amount: string;
+  quantity?: number;
+  unit?: string;
   price?: number;
   purchased: boolean;
 };
@@ -53,7 +68,9 @@ export type OnboardingProfile = {
   sex: string;
   heightCm: string;
   weightKg: string;
-  goal: Goal;
+  /** New profiles use goals. goal remains readable for Round 05 localStorage compatibility. */
+  goals?: Goal[];
+  goal?: Goal;
   weeklyFoodBudget: string;
   weekdayCookTime: string;
   weekdayWeekendDifference: string;
@@ -67,6 +84,21 @@ export type OnboardingProfile = {
   snackHabit: string;
   kitchenCapabilities: string[];
   shoppingPlace: string;
+};
+
+export type FoodEnvironmentKind = "ingredient" | "prepared-meal";
+export type FoodAvailability = "稳定能买到" | "通常能买到" | "不太稳定";
+
+export type FoodEnvironmentItem = {
+  id: string;
+  kind: FoodEnvironmentKind;
+  name: string;
+  scene?: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  place?: string;
+  availability: FoodAvailability;
 };
 
 export type ExecutionStatus = "completed" | "partial" | "skipped";
