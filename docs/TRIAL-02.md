@@ -1,19 +1,21 @@
 # AI Diet Partner · TRIAL-02
 
-> 状态：**等待 Round 06 Production 部署确认后开始**。
+> 状态：**进行中（Day 1）**。
 
-这是 Round 06 修复后的第二轮 7 天真实自用。TRIAL-01 已因核心逻辑问题提前结束，本轮从 Day 1 重新开始，不沿用上一轮测试结论。
+这是 Round 06 修复后的第二轮 7 天真实自用。TRIAL-01 已因核心逻辑问题提前结束，本轮从 Day 1 重新开始，不沿用上一轮测试结论或旧测试数据。
 
 ## 试用信息
 
 - 试用版本：Round 06
-- main 基线：`3b05e6cce821160df800d2f5e650fd520c267725`
-- 部署方式：Cloudflare Pages
+- Round 06 merge commit：`3b05e6cce821160df800d2f5e650fd520c267725`
+- 当前 main：`8bb7e28`
+- 部署方式：Cloudflare Pages Production
+- Production Deployment ID：`b47d3051`
 - 正式地址：https://ai-diet-partner.pages.dev
-- 开始日期：__________
-- 结束日期：__________
+- 开始日期：2026-09-02
+- 结束日期：2026-09-08
 
-> 数据当前只保存在当前浏览器 localStorage。请使用同一台手机、同一个浏览器；不要使用无痕模式，不要主动清除站点数据。
+> 数据当前只保存在当前浏览器 localStorage。为了避免 TRIAL-01 / Round 05 旧数据污染本轮，在 Day 1 正式建档前只做一次初始化：清除 `ai-diet-partner.pages.dev` 的站点数据，或使用一个全新的浏览器 Profile。完成 Day 1 建档后，后续 7 天不要再清除站点数据、不要使用无痕模式，并尽量使用同一台手机、同一个浏览器。
 
 ## 本轮重点
 
