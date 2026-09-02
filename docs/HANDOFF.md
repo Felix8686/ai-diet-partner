@@ -12,13 +12,17 @@
 
 - 项目：AI Diet Partner。
 - TRIAL-01 已提前暂停并保留为 Round 05 的失败试用记录。
-- Round 06 已完成并通过验收。
+- Round 06 已完成、通过验收并正式上线 Production。
 - PR #6 `feat: restore reality data and trial-blocker fixes` 已由 ChatGPT squash merge 到 `main`。
 - Round 06 merge commit：`3b05e6cce821160df800d2f5e650fd520c267725`。
+- Production 部署时 main HEAD：`8bb7e28`。
 - exact-head GitHub CI：PASS。
 - Hermes 本地验收：lint PASS；`npm test` 59/59 PASS；build PASS。
 - Cloudflare Preview：`https://hermes-round-06.ai-diet-partner.pages.dev`。
-- 真实浏览器直连验收未发现新的产品阻断；15:00 与晚餐后时段逻辑已由单元测试覆盖。
+- Cloudflare Production Deployment ID：`b47d3051`。
+- 正式地址：`https://ai-diet-partner.pages.dev`。
+- 六个正式线上路由：`/`、`/onboarding/`、`/food-environment/`、`/week/`、`/shopping/`、`/feedback/` 均 PASS。
+- TRIAL-02 已于 2026-09-02 正式开始，计划到 2026-09-08 完成 Day 7。
 
 ## Round 06 已接受内容
 
@@ -32,32 +36,19 @@
 8. 旧版周方案迁移时，缺少安全元数据的未验证替换方案会被清空。
 9. 当前仍保持 localStorage，不接 Supabase / 登录 / 云同步 / LLM / 地图 / OCR。
 
-## 当前部署任务
+## 当前阶段：TRIAL-02
 
-下一步不是 Round 07 开发，而是把已合并的 Round 06 `main` 部署到 Cloudflare Pages 正式环境。
+现在不进入 Round 07 开发，先完成 Round 06 的 7 天真实自用。
 
-Hermes 只执行部署：
+试用规则：
 
-1. 切到 `main`。
-2. `git pull origin main`。
-3. 确认 HEAD 至少包含 Round 06 merge commit `3b05e6cce821160df800d2f5e650fd520c267725` 以及本 HANDOFF 文档更新。
-4. `npm run build`。
-5. 使用已有 Cloudflare Pages 项目 `ai-diet-partner` 部署 **production / main branch**。
-6. 必须确认正式地址仍为 `https://ai-diet-partner.pages.dev`。
-7. 部署后仅做最小线上检查：首页、onboarding、food-environment、week、shopping、feedback 均可正常打开。
-8. 不修改任何产品代码，不创建新功能，不进入 Round 07。
-9. 最终只报告 Production 部署 PASS/FAIL、deployment ID、正式 URL、线上路由检查结果。
-
-## 下一阶段
-
-Production 部署确认后，开启 **TRIAL-02**：重新从 Day 1 开始真实 7 天自用，不沿用 TRIAL-01 的测试数据和结论。
-
-TRIAL-02 期间：
-- 使用同一台手机、同一个浏览器；
-- 使用真实资料、真实常买食材和真实价格；
-- 非阻断问题只记录，不连续改代码；
-- 若出现会污染试用结论的核心阻断，立即暂停并交回 ChatGPT；
-- Day 7 重点判断：系统是否根据一周真实反馈，让下一周方案更符合现实。
+1. Day 1 正式建档前，为避免 TRIAL-01 / Round 05 旧 localStorage 污染，只初始化一次：清除正式站点旧数据，或使用全新浏览器 Profile。
+2. Day 1 建档完成后，7 天内不再清除站点数据，不使用无痕模式，并尽量固定同一台手机、同一个浏览器。
+3. 使用真实资料、真实常买食材、真实外食 / 食堂价格。
+4. 非阻断问题只记录，不在试用中途连续修改产品代码。
+5. 若出现会污染试用结论的核心阻断，立即暂停 TRIAL-02 并交回 ChatGPT。
+6. Day 7 重点验证：一周真实反馈是否让下一周方案更符合现实。
+7. 试用记录写入 `docs/TRIAL-02.md`。
 
 ## 当前禁止范围
 
